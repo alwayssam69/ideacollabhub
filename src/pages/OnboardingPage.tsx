@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
+import { OnboardingFormData } from '@/types/onboarding';
 
 // Constants for dropdown options
 const AGE_OPTIONS = Array.from({ length: 23 }, (_, i) => i + 18);
@@ -133,7 +133,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [totalSteps] = useState(7);
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<Partial<OnboardingFormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedState, setSelectedState] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("");
@@ -260,7 +260,7 @@ export default function OnboardingPage() {
 
   // Handle form submission for each step
   const handleStepSubmit = (data: any) => {
-    setFormData({ ...formData, ...data });
+    setFormData(prevData => ({ ...prevData, ...data }));
     
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
