@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -237,7 +238,7 @@ export default function OnboardingPage() {
     const currentPreferredIndustries = preferencesForm.getValues("preferredIndustries");
     
     // If the value is already in the array, remove it, otherwise add it
-    let newPreferredIndustries;
+    let newPreferredIndustries: string[];
     if (currentPreferredIndustries.includes(value)) {
       newPreferredIndustries = currentPreferredIndustries.filter(i => i !== value);
     } else {
