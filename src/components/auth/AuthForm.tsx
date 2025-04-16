@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 type AuthMode = "signin" | "signup";
 
@@ -32,6 +34,8 @@ type FormValues = z.infer<typeof formSchema>;
 export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>(mode);
+  const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -41,25 +45,45 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
     },
   });
 
-  function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues) {
     setIsLoading(true);
     
-    // This is a mock authentication - in a real app, you would connect to Supabase
-    setTimeout(() => {
-      setIsLoading(false);
-      
+    try {
       if (authMode === "signin") {
-        toast.success("Welcome back!", {
-          description: "You have successfully signed in.",
-        });
+        const { success, error } = await signIn(values.email, values.password);
+        
+        if (success) {
+          toast.success("Welcome back!", {
+            description: "You have successfully signed in.",
+          });
+          navigate('/');
+        } else {
+          toast.error("Sign in failed", {
+            description: error,
+          });
+        }
       } else {
-        toast.success("Welcome to IdeaCollabHub!", {
-          description: "Your account has been created successfully.",
-        });
+        const { success, error } = await signUp(values.email, values.password);
+        
+        if (success) {
+          toast.success("Welcome to IdeaCollabHub!", {
+            description: "Your account has been created successfully. Please check your email to verify your account.",
+          });
+          navigate('/onboarding');
+        } else {
+          toast.error("Sign up failed", {
+            description: error,
+          });
+        }
       }
-      
-      console.log(values);
-    }, 1500);
+    } catch (error) {
+      console.error("Authentication error:", error);
+      toast.error("Authentication failed", {
+        description: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const toggleAuthMode = () => {
