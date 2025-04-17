@@ -10,7 +10,12 @@ function Background() {
     <div className="absolute inset-0 -z-10">
       <Canvas camera={{ position: [0, 0, 1] }}>
         <Stars />
-        <Cloud opacity={0.5} speed={0.4} width={10} depth={1.5} segments={20} />
+        <Cloud 
+          opacity={0.5} 
+          speed={0.4} 
+          depth={1.5} 
+          segments={20} 
+        />
         <ambientLight intensity={0.5} />
       </Canvas>
     </div>
