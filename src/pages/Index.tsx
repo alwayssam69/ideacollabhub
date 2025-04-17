@@ -1,21 +1,14 @@
-
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Briefcase, Users, Zap } from "lucide-react";
 import { Canvas } from "@react-three/fiber";
-import { Stars, Cloud } from "@react-three/drei";
+import { Stars } from "@react-three/drei";
 
 function Background() {
   return (
     <div className="absolute inset-0 -z-10">
       <Canvas camera={{ position: [0, 0, 1] }}>
         <Stars />
-        <Cloud 
-          opacity={0.5} 
-          speed={0.4} 
-          depth={1.5} 
-          segments={20} 
-        />
         <ambientLight intensity={0.5} />
       </Canvas>
     </div>

@@ -16,6 +16,8 @@ import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import PendingRequestsPage from "./pages/PendingRequestsPage";
 import ExplorePostsPage from "./pages/ExplorePostsPage";
 import SettingsPage from "./pages/SettingsPage";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
             <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="pending-requests" element={<ProtectedRoute><PendingRequestsPage /></ProtectedRoute>} />
             <Route path="explore-posts" element={<ProtectedRoute><ExplorePostsPage /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           </Route>
