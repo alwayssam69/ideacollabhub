@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --background: 220 33% 98%;
+    --background: 250 33% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -14,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 220 85% 45%;
+    --primary: 260 73% 60%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 250 80% 60%;
+    --secondary: 280 73% 65%;
     --secondary-foreground: 210 40% 98%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 220 80% 95%;
+    --accent: 260 80% 95%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
@@ -46,10 +46,10 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
  
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 267 75% 70%;
     --primary-foreground: 210 40% 98%;
  
-    --secondary: 250 80% 60%;
+    --secondary: 280 73% 65%;
     --secondary-foreground: 210 40% 98%;
  
     --muted: 217.2 32.6% 17.5%;
@@ -139,6 +139,40 @@
   
   .animate-slide-out-right {
     animation: slideOutRight 0.3s forwards;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 3s ease-in-out infinite;
+  }
+  
+  .card-hover-effect {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
   }
 }
 

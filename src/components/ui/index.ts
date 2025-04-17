@@ -31,4 +31,9 @@ export {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+export {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
