@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
-import { useRouter } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type ProjectCardProps = {
@@ -43,7 +43,7 @@ type ProjectCardProps = {
 export function ProjectCard({ project, creator }: ProjectCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { sendConnectionRequest, checkConnectionStatus } = useConnectionRequests();
-  const router = useRouter();
+  const navigate = useNavigate();
   const connectionStatus = creator ? checkConnectionStatus(creator.id) : 'none';
 
   const handleConnectClick = async () => {
@@ -62,7 +62,7 @@ export function ProjectCard({ project, creator }: ProjectCardProps) {
   
   const handleMessageClick = () => {
     if (!creator) return;
-    router.push(`/messages?userId=${creator.id}`);
+    navigate(`/messages?userId=${creator.id}`);
   };
 
   return (

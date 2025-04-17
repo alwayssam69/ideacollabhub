@@ -21,3 +21,14 @@ export {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+

@@ -66,14 +66,16 @@ export default function ExplorePostsPage() {
           const userIds = [...new Set(projectsData.map(project => project.user_id))];
           
           if (userIds.length > 0) {
-            const { data: profilesData } = await supabase
+            const { data: profilesData, error: profilesError } = await supabase
               .from("profiles")
               .select("*")
               .in("id", userIds);
               
+            if (profilesError) throw profilesError;
+              
             if (profilesData) {
               const profilesMap: Record<string, Profile> = {};
-              profilesData.forEach(profile => {
+              profilesData.forEach((profile: Profile) => {
                 profilesMap[profile.id] = profile;
               });
               setCreators(profilesMap);

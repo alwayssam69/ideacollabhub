@@ -34,7 +34,7 @@ export function useConnectionRequests() {
         .from('connections')
         .select(`
           *,
-          requester:requester_id(*)
+          requester:profiles!requester_id(*)
         `)
         .eq('recipient_id', user.id)
         .order('created_at', { ascending: false });
@@ -46,15 +46,16 @@ export function useConnectionRequests() {
         .from('connections')
         .select(`
           *,
-          recipient:recipient_id(*)
+          recipient:profiles!recipient_id(*)
         `)
         .eq('requester_id', user.id)
         .order('created_at', { ascending: false });
       
       if (sentError) throw sentError;
       
-      setRequests(receivedData as ConnectionRequest[]);
-      setSentRequests(sentData as ConnectionRequest[]);
+      // Use type assertion to handle the data
+      setRequests(receivedData as unknown as ConnectionRequest[]);
+      setSentRequests(sentData as unknown as ConnectionRequest[]);
     } catch (err) {
       console.error('Error fetching connection requests:', err);
       setError(err instanceof Error ? err.message : 'Failed to load connection requests');
