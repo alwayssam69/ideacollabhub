@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,7 +18,6 @@ type Profile = Tables<"profiles">;
 type Connection = Tables<"connections">;
 type Message = Tables<"messages">;
 
-// Empty state component
 const EmptyState = ({ icon: Icon, title, description, action }: { 
   icon: any, 
   title: string, 
@@ -64,12 +62,13 @@ export default function DashboardPage() {
         // Fetch user profile for availability status
         const { data: profile } = await supabase
           .from("profiles")
-          .select("availability")
+          .select("*")
           .eq("id", user.id)
           .single();
           
-        if (profile?.availability) {
-          setAvailability(profile.availability);
+        if (profile) {
+          // Set availability status safely, checking if the field exists
+          setAvailability(profile.meeting_preference || "Available");
         }
         
         // Update last active timestamp

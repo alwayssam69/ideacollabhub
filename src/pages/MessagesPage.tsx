@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -113,17 +112,14 @@ export default function MessagesPage() {
       try {
         const { data: messagesData, error: messagesError } = await supabase
           .from("messages")
-          .select(`
-            *,
-            sender_profile:profiles!sender_id(*),
-            recipient_profile:profiles!recipient_id(*)
-          `)
+          .select("*")
           .or(`and(sender_id.eq.${user.id},recipient_id.eq.${selectedConversation.profile.id}),and(sender_id.eq.${selectedConversation.profile.id},recipient_id.eq.${user.id})`)
           .order("created_at", { ascending: true });
           
         if (messagesError) throw messagesError;
         
-        setMessages(messagesData as Message[]);
+        // Fix: Cast messages data with as unknown first, then as Message[]
+        setMessages((messagesData || []) as unknown as Message[]);
         
         // Mark messages as read
         if (selectedConversation.unreadCount > 0) {

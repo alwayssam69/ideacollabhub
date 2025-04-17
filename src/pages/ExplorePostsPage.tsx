@@ -99,6 +99,7 @@ function LoadingSkeleton() {
 }
 
 type Project = Tables<"projects">;
+type ProfileRecord = Record<string, Tables<"profiles">>;
 
 export default function ExplorePostsPage() {
   const { user } = useAuth();
@@ -108,7 +109,7 @@ export default function ExplorePostsPage() {
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
-  const [creators, setCreators] = useState<Record<string, Tables<"profiles">>>({});
+  const [creators, setCreators] = useState<ProfileRecord>({});
 
   useEffect(() => {
     const fetchProjects = async () => {

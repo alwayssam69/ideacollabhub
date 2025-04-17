@@ -12,27 +12,33 @@ export const useDiscoverProfiles = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchProfiles = async () => {
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .limit(10);
+
+      if (error) throw error;
+
+      setProfiles(profileData as DiscoverProfile[]);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching profiles:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProfiles = async () => {
-      try {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .limit(10);
-
-        if (error) throw error;
-
-        setProfiles(profileData as DiscoverProfile[]);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching profiles:', err);
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
-        setLoading(false);
-      }
-    };
-
     fetchProfiles();
   }, []);
 
-  return { profiles, loading, error };
+  // Add refetchProfiles function to return value
+  return { 
+    profiles, 
+    loading, 
+    error, 
+    refetchProfiles: fetchProfiles 
+  };
 };
