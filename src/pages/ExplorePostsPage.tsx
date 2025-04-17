@@ -12,7 +12,8 @@ import {
   Tabs,
   TabsContent,
   TabsList,
-  TabsTrigger 
+  TabsTrigger,
+  Sheet
 } from "@/components/ui";
 import { 
   ChevronDown,
@@ -26,6 +27,7 @@ import { LoadingSkeleton } from "@/components/explore/LoadingSkeleton";
 import { ProjectCard } from "@/components/explore/ProjectCard";
 import { useConnectionRequests } from "@/hooks/useConnectionRequests";
 
+// Define explicit types to avoid deep instantiation issues
 type Project = Tables<"projects">;
 type Profile = Tables<"profiles">;
 
@@ -60,7 +62,7 @@ export default function ExplorePostsPage() {
         if (error) throw error;
         
         if (projectsData) {
-          setProjects(projectsData);
+          setProjects(projectsData as Project[]);
           
           // Fetch creators for each project
           const userIds = [...new Set(projectsData.map(project => project.user_id))];
