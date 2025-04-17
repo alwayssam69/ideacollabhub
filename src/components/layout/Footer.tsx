@@ -9,6 +9,9 @@ export default function Footer() {
           &copy; {new Date().getFullYear()} IdeaCollabHub. All rights reserved.
         </p>
         <div className="flex items-center gap-4">
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            Home
+          </Link>
           <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground">
             About
           </Link>
@@ -20,6 +23,9 @@ export default function Footer() {
           </Link>
           <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground">
             Contact
+          </Link>
+          <Link to="/faq" className="text-sm text-muted-foreground hover:text-foreground">
+            FAQ
           </Link>
         </div>
       </div>

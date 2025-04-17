@@ -1,30 +1,13 @@
 
 export interface OnboardingFormData {
   fullName: string;
-  age: string;
-  gender?: string;
-  state: string;
-  city: string;
-  role: 'founder' | 'contributor' | 'both';
+  stage: string;
+  location: string;
   industry: string;
   skills: string[];
-  experienceLevel: string;
-  yearsOfExperience: string;
-  preferredIndustries: string[];
-  preferredSkills: string[];
-  collaborationMode: string;
-  ageRangeMin: string;
-  ageRangeMax: string;
-  locationPreferenceState?: string;
-  locationPreferenceCity?: string;
-  lookingFor: string[];
-  appPurpose: string[];
-  startupStage?: string;
-  focusArea?: string;
-  subSector?: string;
-  oneLiner: string;
-  detailedBio?: string;
-  helpOthers?: boolean;
-  linkedinUrl?: string;
-  portfolioUrl?: string;
+  purposes: string[];
+  availability: string;
+  meetingPreference: string;
+  bio: string;
+  avatar?: File | null;
 }

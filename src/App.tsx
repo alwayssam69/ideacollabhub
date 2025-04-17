@@ -21,6 +21,11 @@ import PendingRequestsPage from "./pages/PendingRequestsPage";
 import ExplorePostsPage from "./pages/ExplorePostsPage";
 import SettingsPage from "./pages/SettingsPage";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import AboutPage from "./pages/AboutPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
+import ContactPage from "./pages/ContactPage";
+import FAQPage from "./pages/FAQPage";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +46,11 @@ const App = () => (
             <Route path="pending-requests" element={<ProtectedRoute><PendingRequestsPage /></ProtectedRoute>} />
             <Route path="explore-posts" element={<ProtectedRoute><ExplorePostsPage /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="privacy" element={<PrivacyPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="contact" element={<ContactPage />} />
+            <Route path="faq" element={<FAQPage />} />
           </Route>
           <Route path="/auth/:mode" element={<AuthPage />} />
           <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
