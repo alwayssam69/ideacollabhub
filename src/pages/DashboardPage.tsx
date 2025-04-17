@@ -67,8 +67,8 @@ export default function DashboardPage() {
           .single();
           
         if (profile) {
-          // Set availability status safely, checking if the field exists
-          setAvailability(profile.meeting_preference || "Available");
+          // Use default "Available" if the field doesn't exist
+          setAvailability("Available");
         }
         
         // Update last active timestamp

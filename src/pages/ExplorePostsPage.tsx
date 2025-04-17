@@ -99,7 +99,8 @@ function LoadingSkeleton() {
 }
 
 type Project = Tables<"projects">;
-type ProfileRecord = Record<string, Tables<"profiles">>;
+type ProfileData = Tables<"profiles">;
+type ProfileRecord = Record<string, ProfileData>;
 
 export default function ExplorePostsPage() {
   const { user } = useAuth();
@@ -145,7 +146,7 @@ export default function ExplorePostsPage() {
               .in("id", userIds);
               
             if (profilesData) {
-              const profilesMap: Record<string, Tables<"profiles">> = {};
+              const profilesMap: ProfileRecord = {};
               profilesData.forEach(profile => {
                 profilesMap[profile.id] = profile;
               });
