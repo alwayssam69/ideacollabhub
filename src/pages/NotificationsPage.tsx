@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Notification = {
   id: string;
@@ -21,55 +23,34 @@ type Notification = {
   read: boolean;
 };
 
+// Empty state component
+const EmptyState = ({ icon: Icon, title, description }: { 
+  icon: any, 
+  title: string, 
+  description: string 
+}) => {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 animate-fade-in">
+      <Icon className="h-12 w-12 text-muted-foreground/30" />
+      <h3 className="mt-4 text-lg font-medium">{title}</h3>
+      <p className="text-sm text-muted-foreground mt-1">{description}</p>
+    </div>
+  );
+};
+
 export default function NotificationsPage() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Fetch notifications (mock data for now)
-    const fetchNotifications = () => {
+    const fetchNotifications = async () => {
+      if (!user) return;
+      
       try {
-        // In a real app, this would be a Supabase query
-        const mockNotifications: Notification[] = [
-          { 
-            id: "1", 
-            type: "connection", 
-            content: "John Doe accepted your connection request", 
-            time: "2 hours ago",
-            read: false 
-          },
-          { 
-            id: "2", 
-            type: "message", 
-            content: "You have a new message from Sarah Smith", 
-            time: "Yesterday",
-            read: false 
-          },
-          { 
-            id: "3", 
-            type: "profile", 
-            content: "Your profile was viewed by 3 people", 
-            time: "3 days ago",
-            read: true 
-          },
-          { 
-            id: "4", 
-            type: "connection", 
-            content: "Michael Johnson wants to connect with you", 
-            time: "4 days ago",
-            read: true 
-          },
-          { 
-            id: "5", 
-            type: "message", 
-            content: "Emma Wilson replied to your message", 
-            time: "1 week ago",
-            read: true 
-          }
-        ];
-        
-        setNotifications(mockNotifications);
+        // In a real app, we would have a notifications table
+        // For now we'll set an empty array to show the empty state
+        setNotifications([]);
       } catch (error) {
         console.error("Error fetching notifications:", error);
         toast.error("Failed to load notifications");
@@ -126,8 +107,27 @@ export default function NotificationsPage() {
   
   if (loading) {
     return (
-      <div className="container py-8 flex justify-center items-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="container py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <h1 className="text-3xl font-bold">Notifications</h1>
+        </div>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {Array(5).fill(0).map((_, i) => (
+                <div key={i} className="flex items-start gap-3 pb-4 border-b last:border-0">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -149,7 +149,7 @@ export default function NotificationsPage() {
         <Button 
           variant="outline" 
           size="sm" 
-          className="mt-3 sm:mt-0"
+          className="mt-3 sm:mt-0 hover-scale transition-colors"
           onClick={markAllAsRead}
           disabled={getUnreadCount() === 0}
         >
@@ -159,20 +159,20 @@ export default function NotificationsPage() {
       
       <Tabs defaultValue="all" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="unread">Unread {getUnreadCount() > 0 && `(${getUnreadCount()})`}</TabsTrigger>
-          <TabsTrigger value="read">Read</TabsTrigger>
+          <TabsTrigger value="all" className="transition-all">All</TabsTrigger>
+          <TabsTrigger value="unread" className="transition-all">Unread {getUnreadCount() > 0 && `(${getUnreadCount()})`}</TabsTrigger>
+          <TabsTrigger value="read" className="transition-all">Read</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="all">
-          <Card>
+        <TabsContent value="all" className="animate-fade-in">
+          <Card className="border border-border/50 hover:shadow-md transition-all">
             <CardContent className="p-0">
               {notifications.length > 0 ? (
                 <div>
                   {notifications.map((notification) => (
                     <div 
                       key={notification.id} 
-                      className={`p-4 border-b last:border-0 hover:bg-accent/5 ${!notification.read ? 'bg-primary/5' : ''}`}
+                      className={`p-4 border-b last:border-0 hover:bg-accent/5 transition-all ${!notification.read ? 'bg-primary/5' : ''}`}
                     >
                       <div className="flex items-start">
                         <div className={`p-2 rounded-full mr-3 ${getBgColor(notification.type)}`}>
@@ -190,6 +190,7 @@ export default function NotificationsPage() {
                               size="sm" 
                               variant="ghost" 
                               onClick={() => markAsRead(notification.id)}
+                              className="hover:bg-primary/10 transition-colors"
                             >
                               Mark as read
                             </Button>
@@ -198,8 +199,9 @@ export default function NotificationsPage() {
                             size="icon"
                             variant="ghost"
                             onClick={() => deleteNotification(notification.id)}
+                            className="hover:bg-destructive/10 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>
                         </div>
                       </div>
@@ -207,25 +209,25 @@ export default function NotificationsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Bell className="h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="mt-4 text-lg font-medium">No notifications</h3>
-                  <p className="text-sm text-muted-foreground mt-1">You're all caught up!</p>
-                </div>
+                <EmptyState 
+                  icon={Bell}
+                  title="No notifications"
+                  description="You're all caught up!"
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="unread">
-          <Card>
+        <TabsContent value="unread" className="animate-fade-in">
+          <Card className="border border-border/50 hover:shadow-md transition-all">
             <CardContent className="p-0">
               {unreadNotifications.length > 0 ? (
                 <div>
                   {unreadNotifications.map((notification) => (
                     <div 
                       key={notification.id} 
-                      className="p-4 border-b last:border-0 hover:bg-accent/5 bg-primary/5"
+                      className="p-4 border-b last:border-0 hover:bg-accent/5 bg-primary/5 transition-all"
                     >
                       <div className="flex items-start">
                         <div className={`p-2 rounded-full mr-3 ${getBgColor(notification.type)}`}>
@@ -242,6 +244,7 @@ export default function NotificationsPage() {
                             size="sm" 
                             variant="ghost" 
                             onClick={() => markAsRead(notification.id)}
+                            className="hover:bg-primary/10 transition-colors"
                           >
                             Mark as read
                           </Button>
@@ -249,8 +252,9 @@ export default function NotificationsPage() {
                             size="icon"
                             variant="ghost"
                             onClick={() => deleteNotification(notification.id)}
+                            className="hover:bg-destructive/10 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>
                         </div>
                       </div>
@@ -258,25 +262,25 @@ export default function NotificationsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Bell className="h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="mt-4 text-lg font-medium">No unread notifications</h3>
-                  <p className="text-sm text-muted-foreground mt-1">You're all caught up!</p>
-                </div>
+                <EmptyState 
+                  icon={Bell}
+                  title="No unread notifications"
+                  description="You're all caught up!"
+                />
               )}
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="read">
-          <Card>
+        <TabsContent value="read" className="animate-fade-in">
+          <Card className="border border-border/50 hover:shadow-md transition-all">
             <CardContent className="p-0">
               {readNotifications.length > 0 ? (
                 <div>
                   {readNotifications.map((notification) => (
                     <div 
                       key={notification.id} 
-                      className="p-4 border-b last:border-0 hover:bg-accent/5"
+                      className="p-4 border-b last:border-0 hover:bg-accent/5 transition-all"
                     >
                       <div className="flex items-start">
                         <div className={`p-2 rounded-full mr-3 ${getBgColor(notification.type)}`}>
@@ -293,8 +297,9 @@ export default function NotificationsPage() {
                             size="icon"
                             variant="ghost"
                             onClick={() => deleteNotification(notification.id)}
+                            className="hover:bg-destructive/10 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                           </Button>
                         </div>
                       </div>
@@ -302,10 +307,11 @@ export default function NotificationsPage() {
                   ))}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Bell className="h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="mt-4 text-lg font-medium">No read notifications</h3>
-                </div>
+                <EmptyState 
+                  icon={Bell}
+                  title="No read notifications"
+                  description=""
+                />
               )}
             </CardContent>
           </Card>

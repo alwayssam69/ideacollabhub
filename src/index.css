@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,6 +92,14 @@
     opacity: 0;
   }
 
+  .hover-scale {
+    @apply hover:scale-[1.02] active:scale-[0.98] transition-transform;
+  }
+
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+  }
+
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -100,6 +109,36 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+  
+  @keyframes slideOutLeft {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+  }
+  
+  @keyframes slideOutRight {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+  
+  .animate-slide-out-left {
+    animation: slideOutLeft 0.3s forwards;
+  }
+  
+  .animate-slide-out-right {
+    animation: slideOutRight 0.3s forwards;
   }
 }
 

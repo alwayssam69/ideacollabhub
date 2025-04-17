@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,9 +13,34 @@ import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Profile = Tables<"profiles">;
 type Connection = Tables<"connections">;
+type Message = Tables<"messages">;
+
+// Empty state component
+const EmptyState = ({ icon: Icon, title, description, action }: { 
+  icon: any, 
+  title: string, 
+  description: string, 
+  action?: { label: string, href: string } 
+}) => {
+  return (
+    <div className="text-center py-8">
+      <Icon className="mx-auto h-12 w-12 text-muted-foreground/30" />
+      <h3 className="mt-2 font-medium text-lg">{title}</h3>
+      <p className="text-sm text-muted-foreground">
+        {description}
+      </p>
+      {action && (
+        <Button variant="link" className="mt-2" asChild>
+          <Link to={action.href}>{action.label}</Link>
+        </Button>
+      )}
+    </div>
+  );
+};
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -28,20 +54,32 @@ export default function DashboardPage() {
   const [recentConnections, setRecentConnections] = useState<(Connection & { profile: Profile })[]>([]);
   const [notifications, setNotifications] = useState<{ id: string, type: string, content: string, time: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!user) return;
 
       try {
-        // Simulate real data fetching
-        setLastActive("2 hours ago");
+        // Fetch user profile for availability status
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("availability")
+          .eq("id", user.id)
+          .single();
+          
+        if (profile?.availability) {
+          setAvailability(profile.availability);
+        }
+        
+        // Update last active timestamp
+        setLastActive("Just now");
         
         // Fetch connections count
         const { count: connectionsCount } = await supabase
           .from("connections")
           .select("*", { count: "exact" })
-          .eq("requester_id", user.id)
+          .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
           .eq("status", "accepted");
           
         if (connectionsCount !== null) {
@@ -70,8 +108,8 @@ export default function DashboardPage() {
           setUnreadMessages(messagesCount);
         }
 
-        // Simulate profile views
-        setProfileViews(Math.floor(Math.random() * 20) + 5);
+        // Simulate profile views (would be tracked in a real profile_views table)
+        setProfileViews(Math.floor(Math.random() * 10));
 
         // Fetch pending connection requests
         const { data: pendingRequests } = await supabase
@@ -86,8 +124,8 @@ export default function DashboardPage() {
           
         if (pendingRequests) {
           // Extract just the profile data
-          const profiles = pendingRequests.map(request => request.profiles);
-          setConnectionRequests(profiles as unknown as Profile[]);
+          const profiles = pendingRequests.map(request => request.profiles as unknown as Profile);
+          setConnectionRequests(profiles);
         }
 
         // Fetch recent connections
@@ -106,17 +144,15 @@ export default function DashboardPage() {
           setRecentConnections(connections as any);
         }
 
-        // Set demo notifications
-        setNotifications([
-          { id: "1", type: "connection", content: "John Doe accepted your connection request", time: "2 hours ago" },
-          { id: "2", type: "message", content: "You have a new message from Sarah Smith", time: "Yesterday" },
-          { id: "3", type: "profile", content: "Your profile was viewed by 3 people", time: "3 days ago" }
-        ]);
+        // In a real app, we would fetch real notifications
+        // For now we'll leave this empty to show empty state
+        setNotifications([]);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
         setLoading(false);
+        setProfileLoading(false);
       }
     };
 
@@ -124,13 +160,14 @@ export default function DashboardPage() {
   }, [user]);
 
   const acceptConnectionRequest = async (profileId: string) => {
-    // Handle accepting connection request
+    if (!user) return;
+    
     try {
       await supabase
         .from("connections")
         .update({ status: "accepted" })
         .eq("requester_id", profileId)
-        .eq("recipient_id", user?.id);
+        .eq("recipient_id", user.id);
         
       // Refresh connection requests
       const updatedRequests = connectionRequests.filter(profile => profile.id !== profileId);
@@ -146,13 +183,14 @@ export default function DashboardPage() {
   };
 
   const declineConnectionRequest = async (profileId: string) => {
-    // Handle declining connection request
+    if (!user) return;
+    
     try {
       await supabase
         .from("connections")
         .update({ status: "rejected" })
         .eq("requester_id", profileId)
-        .eq("recipient_id", user?.id);
+        .eq("recipient_id", user.id);
         
       // Refresh connection requests
       const updatedRequests = connectionRequests.filter(profile => profile.id !== profileId);
@@ -179,30 +217,36 @@ export default function DashboardPage() {
       {/* Section A: Top Summary Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">
+          <h1 className="text-3xl font-bold animate-fade-in">
             Welcome back, {user?.user_metadata?.full_name || user?.email?.split('@')[0]}!
           </h1>
           <div className="flex items-center gap-3 mt-1">
-            <Badge variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-              {availability}
-            </Badge>
-            <p className="text-muted-foreground text-sm">Last active: {lastActive}</p>
+            {profileLoading ? (
+              <Skeleton className="h-6 w-24" />
+            ) : (
+              <Badge variant="outline" className="bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-all">
+                {availability}
+              </Badge>
+            )}
+            <p className="text-muted-foreground text-sm">Last active: {lastActive || "Just now"}</p>
           </div>
         </div>
-        <Button className="mt-3 sm:mt-0" size="sm" variant="outline">
-          <Edit className="mr-2 h-4 w-4" />
-          Edit Profile
+        <Button className="mt-3 sm:mt-0 hover-scale" size="sm" variant="outline" asChild>
+          <Link to="/settings">
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Profile
+          </Link>
         </Button>
       </div>
 
       {/* Section B: Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card>
+        <Card className="hover-scale transition-all border border-border/50 hover:border-primary/20 hover:shadow-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Connections</p>
-                <h3 className="text-2xl font-bold mt-1">{connections}</h3>
+                <h3 className="text-2xl font-bold mt-1">{loading ? <Skeleton className="h-8 w-8" /> : connections}</h3>
               </div>
               <div className="bg-primary/10 p-3 rounded-full">
                 <Users className="h-6 w-6 text-primary" />
@@ -211,12 +255,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-scale transition-all border border-border/50 hover:border-amber-500/20 hover:shadow-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
-                <h3 className="text-2xl font-bold mt-1">{pendingRequests}</h3>
+                <h3 className="text-2xl font-bold mt-1">{loading ? <Skeleton className="h-8 w-8" /> : pendingRequests}</h3>
               </div>
               <div className="bg-amber-500/10 p-3 rounded-full">
                 <UserPlus className="h-6 w-6 text-amber-500" />
@@ -225,12 +269,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-scale transition-all border border-border/50 hover:border-blue-500/20 hover:shadow-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Unread Messages</p>
-                <h3 className="text-2xl font-bold mt-1">{unreadMessages}</h3>
+                <h3 className="text-2xl font-bold mt-1">{loading ? <Skeleton className="h-8 w-8" /> : unreadMessages}</h3>
               </div>
               <div className="bg-blue-500/10 p-3 rounded-full">
                 <MessageSquare className="h-6 w-6 text-blue-500" />
@@ -239,12 +283,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-scale transition-all border border-border/50 hover:border-purple-500/20 hover:shadow-md">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Profile Views</p>
-                <h3 className="text-2xl font-bold mt-1">{profileViews}</h3>
+                <h3 className="text-2xl font-bold mt-1">{loading ? <Skeleton className="h-8 w-8" /> : profileViews}</h3>
               </div>
               <div className="bg-purple-500/10 p-3 rounded-full">
                 <Eye className="h-6 w-6 text-purple-500" />
@@ -258,7 +302,7 @@ export default function DashboardPage() {
         {/* Left column: Connection Requests and CTA */}
         <div className="lg:col-span-2 space-y-6">
           {/* Section C: New Connection Requests */}
-          <Card>
+          <Card className="border border-border/50 hover:shadow-md transition-all">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle>New Connection Requests</CardTitle>
@@ -274,7 +318,25 @@ export default function DashboardPage() {
               <CardDescription>People who want to connect with you</CardDescription>
             </CardHeader>
             <CardContent>
-              {connectionRequests.length > 0 ? (
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2].map(i => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-lg border">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-full" />
+                        <div>
+                          <Skeleton className="h-4 w-32 mb-2" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-9 w-20" />
+                        <Skeleton className="h-9 w-20" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : connectionRequests.length > 0 ? (
                 <div className="space-y-4">
                   {connectionRequests.map((profile) => (
                     <div 
@@ -282,7 +344,7 @@ export default function DashboardPage() {
                       className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <Avatar>
+                        <Avatar className="border border-border/50 ring-2 ring-background">
                           <AvatarImage src={profile.avatar_url || ""} />
                           <AvatarFallback>{profile.full_name?.substring(0, 2) || "U"}</AvatarFallback>
                         </Avatar>
@@ -291,7 +353,7 @@ export default function DashboardPage() {
                           <p className="text-sm text-muted-foreground">{profile.title || "No title"}</p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {profile.skills?.slice(0, 3).map((skill, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs">
+                              <Badge key={i} variant="secondary" className="text-xs animate-fade-in">
                                 {skill}
                               </Badge>
                             ))}
@@ -302,7 +364,7 @@ export default function DashboardPage() {
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          className="text-red-500 hover:text-red-600 border-red-200 hover:bg-red-50"
+                          className="text-red-500 hover:text-red-600 border-red-200 hover:bg-red-50 transition-colors"
                           onClick={() => declineConnectionRequest(profile.id)}
                         >
                           Decline
@@ -310,6 +372,7 @@ export default function DashboardPage() {
                         <Button 
                           size="sm"
                           onClick={() => acceptConnectionRequest(profile.id)}
+                          className="bg-primary hover:bg-primary/90 transition-colors"
                         >
                           Accept
                         </Button>
@@ -318,19 +381,17 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <UserCheck className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="mt-2 font-medium text-lg">No new requests</h3>
-                  <p className="text-sm text-muted-foreground">
-                    When someone wants to connect, they'll appear here.
-                  </p>
-                </div>
+                <EmptyState 
+                  icon={UserCheck}
+                  title="No new requests"
+                  description="When someone wants to connect, they'll appear here."
+                />
               )}
             </CardContent>
           </Card>
 
           {/* Section F: CTA Banner */}
-          <Card className="bg-gradient-to-r from-primary/5 to-secondary/5">
+          <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 hover:from-primary/10 hover:to-secondary/10 transition-all duration-300 border-none shadow-md">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row items-center justify-between">
                 <div className="mb-4 md:mb-0">
@@ -339,7 +400,7 @@ export default function DashboardPage() {
                     Update your filters or explore new connections.
                   </p>
                 </div>
-                <Button asChild>
+                <Button asChild className="bg-primary hover:bg-primary/90 shadow-sm hover:shadow transition-all">
                   <Link to="/discover">
                     Find Connections
                     <ExternalLink className="ml-2 h-4 w-4" />
@@ -350,7 +411,7 @@ export default function DashboardPage() {
           </Card>
 
           {/* Section D: Recent Connections */}
-          <Card>
+          <Card className="border border-border/50 hover:shadow-md transition-all">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle>Recent Connections</CardTitle>
@@ -366,15 +427,30 @@ export default function DashboardPage() {
               <CardDescription>Your newly connected peers</CardDescription>
             </CardHeader>
             <CardContent>
-              {recentConnections.length > 0 ? (
+              {loading ? (
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="p-4 rounded-lg border">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div>
+                          <Skeleton className="h-4 w-24 mb-2" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-8 w-full mt-3" />
+                    </div>
+                  ))}
+                </div>
+              ) : recentConnections.length > 0 ? (
                 <div className="grid md:grid-cols-3 gap-4">
                   {recentConnections.map((connection) => (
                     <div 
                       key={connection.id} 
-                      className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors flex flex-col"
+                      className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors flex flex-col hover-scale"
                     >
                       <div className="flex items-center gap-3">
-                        <Avatar>
+                        <Avatar className="border border-border/50 ring-2 ring-background">
                           <AvatarImage src={connection.profile.avatar_url || ""} />
                           <AvatarFallback>
                             {connection.profile.full_name?.substring(0, 2) || "U"}
@@ -390,7 +466,7 @@ export default function DashboardPage() {
                           {connection.profile.skills && connection.profile.skills.length > 0 ? (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {connection.profile.skills.slice(0, 2).map((skill, i) => (
-                                <Badge key={i} variant="secondary" className="text-xs">
+                                <Badge key={i} variant="secondary" className="text-xs animate-fade-in">
                                   {skill}
                                 </Badge>
                               ))}
@@ -402,7 +478,7 @@ export default function DashboardPage() {
                             <span>No skills listed</span>
                           )}
                         </div>
-                        <Button size="sm" variant="outline" className="w-full" asChild>
+                        <Button size="sm" variant="outline" className="w-full transition-colors hover:bg-primary hover:text-white" asChild>
                           <Link to="/messages">
                             <MessageSquare className="mr-1 h-3 w-3" />
                             Message
@@ -413,16 +489,15 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Users className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="mt-2 font-medium text-lg">No connections yet</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Start connecting with others to see them here.
-                  </p>
-                  <Button variant="link" className="mt-2" asChild>
-                    <Link to="/discover">Find people to connect with</Link>
-                  </Button>
-                </div>
+                <EmptyState 
+                  icon={Users}
+                  title="No connections yet"
+                  description="Start connecting with others to see them here."
+                  action={{
+                    label: "Find people to connect with",
+                    href: "/discover"
+                  }}
+                />
               )}
             </CardContent>
           </Card>
@@ -431,7 +506,7 @@ export default function DashboardPage() {
         {/* Right column: Notifications */}
         <div>
           {/* Section E: Notifications */}
-          <Card className="mb-6">
+          <Card className="mb-6 border border-border/50 hover:shadow-md transition-all">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -449,7 +524,19 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {notifications.length > 0 ? (
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-start gap-3 p-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-full mb-2" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : notifications.length > 0 ? (
                 <div className="space-y-1">
                   {notifications.map((notification) => (
                     <div key={notification.id} className="p-3 hover:bg-accent/5 rounded-md">
@@ -475,19 +562,17 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Bell className="mx-auto h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="mt-2 font-medium">No notifications</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Stay tuned for updates and alerts.
-                  </p>
-                </div>
+                <EmptyState 
+                  icon={Bell}
+                  title="No notifications"
+                  description="Stay tuned for updates and alerts."
+                />
               )}
             </CardContent>
           </Card>
 
           {/* Activity summary */}
-          <Card>
+          <Card className="border border-border/50 hover:shadow-md transition-all">
             <CardHeader>
               <CardTitle>Activity Summary</CardTitle>
               <CardDescription>Your recent platform activity</CardDescription>
@@ -501,6 +586,8 @@ export default function DashboardPage() {
                   </div>
                   <span className="font-medium">75%</span>
                 </div>
+                <Progress value={75} className="h-2" />
+                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <Users className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -508,6 +595,8 @@ export default function DashboardPage() {
                   </div>
                   <span className="font-medium">85%</span>
                 </div>
+                <Progress value={85} className="h-2" />
+                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <MessageSquare className="mr-2 h-4 w-4 text-muted-foreground" />
