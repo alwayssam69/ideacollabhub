@@ -12,7 +12,13 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: '2rem',
+      padding: {
+        DEFAULT: '1rem',
+        sm: '2rem',
+        lg: '4rem',
+        xl: '5rem',
+        '2xl': '6rem',
+      },
       screens: {
         '2xl': '1400px'
       }
@@ -26,11 +32,31 @@ export default {
         foreground: 'hsl(var(--foreground))',
         primary: {
           DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
+          foreground: 'hsl(var(--primary-foreground))',
+          50: 'hsl(var(--primary) / 0.05)',
+          100: 'hsl(var(--primary) / 0.1)',
+          200: 'hsl(var(--primary) / 0.2)',
+          300: 'hsl(var(--primary) / 0.3)',
+          400: 'hsl(var(--primary) / 0.4)',
+          500: 'hsl(var(--primary) / 0.5)',
+          600: 'hsl(var(--primary) / 0.6)',
+          700: 'hsl(var(--primary) / 0.7)',
+          800: 'hsl(var(--primary) / 0.8)',
+          900: 'hsl(var(--primary) / 0.9)',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
+          foreground: 'hsl(var(--secondary-foreground))',
+          50: 'hsl(var(--secondary) / 0.05)',
+          100: 'hsl(var(--secondary) / 0.1)',
+          200: 'hsl(var(--secondary) / 0.2)',
+          300: 'hsl(var(--secondary) / 0.3)',
+          400: 'hsl(var(--secondary) / 0.4)',
+          500: 'hsl(var(--secondary) / 0.5)',
+          600: 'hsl(var(--secondary) / 0.6)',
+          700: 'hsl(var(--secondary) / 0.7)',
+          800: 'hsl(var(--secondary) / 0.8)',
+          900: 'hsl(var(--secondary) / 0.9)',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
@@ -82,10 +108,18 @@ export default {
       borderRadius: {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
+        sm: 'calc(var(--radius) - 4px)',
+        full: '9999px',
       },
       transitionDuration: {
+        '200': '200ms',
+        '300': '300ms',
         '400': '400ms',
+        '500': '500ms',
+      },
+      transitionTimingFunction: {
+        'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        'bounce': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       keyframes: {
         "accordion-down": {
@@ -122,14 +156,18 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-10px)" },
         },
-        "pulse-subtle": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.8" },
-        },
         "gradient-shift": {
           "0%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
           "100%": { backgroundPosition: "0% 50%" },
+        },
+        "shimmer": {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        "bounce-subtle": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-5px)" },
         },
       },
       animation: {
@@ -140,11 +178,21 @@ export default {
         "fade-in": "fade-in 0.3s ease-out",
         "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
         "float": "float 3s ease-in-out infinite",
-        "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
         "gradient-shift": "gradient-shift 3s ease infinite",
+        "shimmer": "shimmer 2s linear infinite",
+        "bounce-subtle": "bounce-subtle 2s ease-in-out infinite",
       },
       backgroundSize: {
         'gradient-shift': '200% 200%',
+        'shimmer': '200% 100%',
+      },
+      boxShadow: {
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+        'neon': '0 0 5px theme(colors.primary.500), 0 0 20px theme(colors.primary.500)',
+        'glow': '0 0 15px theme(colors.primary.500)',
+      },
+      backdropBlur: {
+        'xs': '2px',
       },
     }
   },

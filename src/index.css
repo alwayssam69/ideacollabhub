@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -73,18 +72,37 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   ::selection {
     @apply bg-primary/20 text-foreground;
   }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/50;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full hover:bg-muted-foreground/50 transition-colors;
+  }
 }
 
 @layer utilities {
   .glass-effect {
-    @apply backdrop-blur-lg bg-white/10 border border-white/20;
+    @apply backdrop-blur-xl bg-background/80 border border-border/50 shadow-lg;
   }
 
   .animate-fade-in {
@@ -93,7 +111,7 @@
   }
 
   .hover-scale {
-    @apply hover:scale-[1.02] active:scale-[0.98] transition-transform;
+    @apply hover:scale-[1.02] active:scale-[0.98] transition-all duration-300;
   }
 
   .text-gradient-primary {
@@ -168,7 +186,7 @@
   }
   
   .card-hover-effect {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+    @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/20;
   }
   
   .gradient-text {
@@ -176,11 +194,31 @@
   }
   
   .neo-blur {
-    @apply backdrop-blur-xl bg-black/40 border border-white/10 shadow-lg;
+    @apply backdrop-blur-xl bg-background/80 border border-border/50 shadow-lg;
   }
   
   .card-gradient {
-    @apply bg-gradient-to-br from-card to-secondary/5 backdrop-blur-sm;
+    @apply bg-gradient-to-br from-card to-secondary/5 backdrop-blur-sm border border-border/50;
+  }
+
+  .button-hover-effect {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/20;
+  }
+
+  .link-hover-effect {
+    @apply transition-colors duration-200 hover:text-primary;
+  }
+
+  .input-focus-effect {
+    @apply focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200;
+  }
+
+  .nav-link-active {
+    @apply text-primary bg-primary/10;
+  }
+
+  .nav-link {
+    @apply text-muted-foreground hover:text-primary transition-colors duration-200;
   }
 }
 

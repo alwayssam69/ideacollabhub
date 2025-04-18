@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,6 +6,7 @@ import Footer from "./Footer";
 import SideNav from "./SideNav";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function MainLayout() {
   const { user } = useAuth();
@@ -19,27 +19,31 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-muted/5">
       <Header />
-      <div className={`flex flex-1 ${!isHomePage && "bg-muted/10"}`}>
+      <div className={cn(
+        "flex flex-1 transition-all duration-300",
+        !isHomePage && "bg-muted/5"
+      )}>
         {user && !isHomePage && (
           <>
             {/* Mobile sidebar toggle */}
             <div className="md:hidden fixed bottom-6 right-6 z-50">
               <Button
                 size="icon"
-                className="h-12 w-12 rounded-full shadow-lg"
+                className="h-14 w-14 rounded-full shadow-xl bg-background/90 backdrop-blur-sm hover:bg-background/80 transition-all duration-300"
                 onClick={toggleSidebar}
               >
-                <Menu />
+                <Menu className="h-6 w-6" />
               </Button>
             </div>
             
             {/* Mobile sidebar */}
             <div 
-              className={`fixed inset-y-0 left-0 z-40 w-64 transform bg-background shadow-lg transition-transform duration-200 ease-in-out md:hidden ${
+              className={cn(
+                "fixed inset-y-0 left-0 z-40 w-72 transform bg-background/95 backdrop-blur-sm shadow-2xl transition-all duration-300 ease-in-out md:hidden",
                 sidebarOpen ? "translate-x-0" : "-translate-x-full"
-              }`}
+              )}
             >
               <SideNav />
             </div>
@@ -47,18 +51,20 @@ export default function MainLayout() {
             {/* Mobile sidebar backdrop */}
             {sidebarOpen && (
               <div 
-                className="fixed inset-0 z-30 bg-black/20 md:hidden"
+                className="fixed inset-0 z-30 bg-black/30 backdrop-blur-sm md:hidden"
                 onClick={() => setSidebarOpen(false)}
-              ></div>
+              />
             )}
             
             {/* Desktop sidebar */}
-            <div className="hidden md:block">
-              <SideNav />
+            <div className="hidden md:block sticky top-0 h-screen">
+              <div className="h-full bg-background/95 backdrop-blur-sm border-r border-border/50">
+                <SideNav />
+              </div>
             </div>
           </>
         )}
-        <main className="flex-1">
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 md:px-6 lg:px-8">
           <Outlet />
         </main>
       </div>

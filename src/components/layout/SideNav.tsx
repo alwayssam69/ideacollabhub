@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation, Link } from "react-router-dom";
 import {
@@ -13,7 +12,8 @@ import {
   UserPlus,
   Users,
   Bell,
-  Search
+  Search,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,8 +42,10 @@ const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-center p-2 h-10", 
-                  isActive && "bg-primary/10 text-primary"
+                  "w-full justify-center p-2 h-10 rounded-lg transition-all duration-200",
+                  isActive 
+                    ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                    : "hover:bg-muted/50"
                 )}
                 size="icon"
               >
@@ -51,7 +53,7 @@ const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
               </Button>
             </Link>
           </TooltipTrigger>
-          <TooltipContent side="right">
+          <TooltipContent side="right" className="bg-background/95 backdrop-blur-sm">
             {label}
           </TooltipContent>
         </Tooltip>
@@ -64,8 +66,10 @@ const NavItem = ({ to, icon: Icon, label, collapsed }: NavItemProps) => {
       <Button
         variant="ghost"
         className={cn(
-          "w-full justify-start gap-3 pl-3", 
-          isActive && "bg-primary/10 text-primary"
+          "w-full justify-start gap-3 pl-3 rounded-lg transition-all duration-200",
+          isActive 
+            ? "bg-primary/10 text-primary hover:bg-primary/20" 
+            : "hover:bg-muted/50"
         )}
       >
         <Icon className="h-5 w-5" />
@@ -99,37 +103,48 @@ export default function SideNav() {
   
   return (
     <div className={cn(
-      "border-r h-full flex flex-col transition-all duration-300 bg-background",
+      "h-full flex flex-col transition-all duration-300 bg-background/95 backdrop-blur-sm",
       collapsed ? "w-16" : "w-64"
     )}>
       <div className={cn(
-        "p-4 border-b flex items-center",
+        "p-4 border-b border-border/50 flex items-center",
         collapsed ? "justify-center" : "justify-between"
       )}>
         {!collapsed && (
-          <Link to="/profile" className="flex items-center gap-3">
-            <Avatar>
+          <Link to="/profile" className="flex items-center gap-3 group">
+            <Avatar className="ring-2 ring-primary/20 transition-all duration-200 group-hover:ring-primary/40">
               <AvatarImage src={user.user_metadata?.avatar_url} />
-              <AvatarFallback>{user.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {user.email?.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div>
-              <p className="font-medium">{user.user_metadata?.full_name || user.email?.split('@')[0]}</p>
-              <p className="text-xs text-muted-foreground">View Profile</p>
+              <p className="font-medium group-hover:text-primary transition-colors">
+                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+              </p>
+              <p className="text-xs text-muted-foreground group-hover:text-primary/80 transition-colors">
+                View Profile
+              </p>
             </div>
           </Link>
         )}
         
         {collapsed && (
-          <Avatar>
+          <Avatar className="ring-2 ring-primary/20">
             <AvatarImage src={user.user_metadata?.avatar_url} />
-            <AvatarFallback>{user.email?.substring(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {user.email?.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
         )}
         
         <Button 
           variant="ghost" 
           size="icon" 
-          className={cn("rounded-full", collapsed && "ml-0")}
+          className={cn(
+            "rounded-full hover:bg-muted/50 transition-all duration-200",
+            collapsed && "ml-0"
+          )}
           onClick={toggleSidebar}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -147,7 +162,7 @@ export default function SideNav() {
         <NavItem to="/settings" icon={Settings} label="Settings" collapsed={collapsed} />
       </div>
       
-      <div className="mt-auto p-3 border-t">
+      <div className="mt-auto p-3 border-t border-border/50">
         {collapsed ? (
           <TooltipProvider>
             <Tooltip>
@@ -155,13 +170,13 @@ export default function SideNav() {
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="w-full"
+                  className="w-full rounded-lg hover:bg-red-500/10 hover:text-red-500 transition-all duration-200"
                   onClick={handleSignOut}
                 >
                   <LogOut className="h-5 w-5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">
+              <TooltipContent side="right" className="bg-background/95 backdrop-blur-sm">
                 Sign out
               </TooltipContent>
             </Tooltip>
@@ -169,7 +184,7 @@ export default function SideNav() {
         ) : (
           <Button 
             variant="ghost" 
-            className="w-full justify-start gap-3 text-muted-foreground hover:text-foreground"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all duration-200"
             onClick={handleSignOut}
           >
             <LogOut className="h-5 w-5" />
