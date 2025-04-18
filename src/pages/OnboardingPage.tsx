@@ -177,16 +177,16 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
-          <p className="text-gray-600">Let's get to know you better to find the perfect matches</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Complete Your Profile</h1>
+          <p className="text-slate-300">Let's get to know you better to find the perfect matches</p>
         </div>
         
-        <Card className="shadow-lg border-0">
-          <CardHeader className="border-b border-gray-100">
-            <CardTitle className="text-xl font-semibold text-gray-900">Professional Information</CardTitle>
+        <Card className="shadow-lg border-0 bg-slate-900/50 backdrop-blur">
+          <CardHeader className="border-b border-slate-700">
+            <CardTitle className="text-xl font-semibold text-white">Professional Information</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <Form {...form}>
@@ -197,7 +197,7 @@ export default function OnboardingPage() {
                     name="industry"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Industry</FormLabel>
+                        <FormLabel className="text-sm font-medium text-slate-300">Industry</FormLabel>
                         <Select
                           onValueChange={(value) => {
                             field.onChange(value);
@@ -206,19 +206,19 @@ export default function OnboardingPage() {
                           defaultValue={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger className="h-11">
+                            <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
                               <SelectValue placeholder="Select your industry" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="bg-slate-800 border-slate-700">
                             {INDUSTRY_OPTIONS.map((industry) => (
-                              <SelectItem key={industry} value={industry}>
+                              <SelectItem key={industry} value={industry} className="text-slate-200 hover:bg-slate-700">
                                 {industry}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-xs text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -228,7 +228,7 @@ export default function OnboardingPage() {
                     name="skills"
                     render={() => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Skills</FormLabel>
+                        <FormLabel className="text-sm font-medium text-slate-300">Skills</FormLabel>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {availableSkills.map((skill) => (
                             <FormField
@@ -252,9 +252,10 @@ export default function OnboardingPage() {
                                               )
                                             );
                                       }}
+                                      className="border-slate-600 data-[state=checked]:bg-indigo-600"
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm font-normal text-gray-700">
+                                  <FormLabel className="text-sm font-normal text-slate-300">
                                     {skill}
                                   </FormLabel>
                                 </FormItem>
@@ -262,7 +263,7 @@ export default function OnboardingPage() {
                             />
                           ))}
                         </div>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-xs text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -272,7 +273,7 @@ export default function OnboardingPage() {
                     name="purposes"
                     render={() => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">What are you looking for?</FormLabel>
+                        <FormLabel className="text-sm font-medium text-slate-300">What are you looking for?</FormLabel>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {PURPOSE_OPTIONS.map((purpose) => (
                             <FormField
@@ -296,9 +297,10 @@ export default function OnboardingPage() {
                                               )
                                             );
                                       }}
+                                      className="border-slate-600 data-[state=checked]:bg-indigo-600"
                                     />
                                   </FormControl>
-                                  <FormLabel className="text-sm font-normal text-gray-700">
+                                  <FormLabel className="text-sm font-normal text-slate-300">
                                     {purpose}
                                   </FormLabel>
                                 </FormItem>
@@ -306,7 +308,7 @@ export default function OnboardingPage() {
                             />
                           ))}
                         </div>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-xs text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -317,25 +319,25 @@ export default function OnboardingPage() {
                       name="availability"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700">Availability</FormLabel>
+                          <FormLabel className="text-sm font-medium text-slate-300">Availability</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-11">
+                              <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
                                 <SelectValue placeholder="Select your availability" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent className="bg-slate-800 border-slate-700">
                               {AVAILABILITY_OPTIONS.map((option) => (
-                                <SelectItem key={option} value={option}>
+                                <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
                                   {option}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage className="text-xs" />
+                          <FormMessage className="text-xs text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -345,25 +347,25 @@ export default function OnboardingPage() {
                       name="meetingPreference"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-medium text-gray-700">Meeting Preference</FormLabel>
+                          <FormLabel className="text-sm font-medium text-slate-300">Meeting Preference</FormLabel>
                           <Select
                             onValueChange={field.onChange}
                             defaultValue={field.value}
                           >
                             <FormControl>
-                              <SelectTrigger className="h-11">
+                              <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
                                 <SelectValue placeholder="Select your preference" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
+                            <SelectContent className="bg-slate-800 border-slate-700">
                               {MEETING_PREFERENCE_OPTIONS.map((option) => (
-                                <SelectItem key={option} value={option}>
+                                <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
                                   {option}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          <FormMessage className="text-xs" />
+                          <FormMessage className="text-xs text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -374,15 +376,15 @@ export default function OnboardingPage() {
                     name="bio"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-gray-700">Bio</FormLabel>
+                        <FormLabel className="text-sm font-medium text-slate-300">Bio</FormLabel>
                         <FormControl>
                           <Textarea
                             placeholder="Tell us about yourself, your experience, and what you're looking for..."
-                            className="min-h-[120px] resize-none"
+                            className="min-h-[120px] resize-none bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-400"
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage className="text-xs" />
+                        <FormMessage className="text-xs text-red-400" />
                       </FormItem>
                     )}
                   />
