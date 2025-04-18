@@ -72,11 +72,23 @@ export type Database = {
           full_name: string | null
           id: string
           location: string | null
-          looking_for: string | null
+          looking_for: string[] | null
           skills: string[] | null
           title: string | null
           updated_at: string
           username: string | null
+          stage: string | null
+          industry: string | null
+          availability: string | null
+          meeting_preference: string | null
+          onboarding_completed: boolean | null
+          project_stage: string | null
+          project_description: string | null
+          preferred_industries: string[] | null
+          preferred_project_types: string[] | null
+          motivation: string | null
+          linkedin_url: string | null
+          portfolio_url: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -86,11 +98,23 @@ export type Database = {
           full_name?: string | null
           id: string
           location?: string | null
-          looking_for?: string | null
+          looking_for?: string[] | null
           skills?: string[] | null
           title?: string | null
           updated_at?: string
           username?: string | null
+          stage?: string | null
+          industry?: string | null
+          availability?: string | null
+          meeting_preference?: string | null
+          onboarding_completed?: boolean | null
+          project_stage?: string | null
+          project_description?: string | null
+          preferred_industries?: string[] | null
+          preferred_project_types?: string[] | null
+          motivation?: string | null
+          linkedin_url?: string | null
+          portfolio_url?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -100,11 +124,23 @@ export type Database = {
           full_name?: string | null
           id?: string
           location?: string | null
-          looking_for?: string | null
+          looking_for?: string[] | null
           skills?: string[] | null
           title?: string | null
           updated_at?: string
           username?: string | null
+          stage?: string | null
+          industry?: string | null
+          availability?: string | null
+          meeting_preference?: string | null
+          onboarding_completed?: boolean | null
+          project_stage?: string | null
+          project_description?: string | null
+          preferred_industries?: string[] | null
+          preferred_project_types?: string[] | null
+          motivation?: string | null
+          linkedin_url?: string | null
+          portfolio_url?: string | null
         }
         Relationships: []
       }

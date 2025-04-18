@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -186,31 +185,66 @@ export default function OnboardingPage() {
         return;
       }
 
-      // Update profile in Supabase
-      const { error } = await supabase
+      // First, check if profile exists
+      const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
-        .update({
-          full_name: finalData.fullName,
-          stage: finalData.stage,
-          location: finalData.location,
-          industry: finalData.industry,
-          skills: finalData.skills,
-          looking_for: finalData.purposes?.join(", "),
-          availability: finalData.availability,
-          meeting_preference: finalData.meetingPreference,
-          bio: finalData.bio,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+        .select('id')
+        .eq('id', user.id)
+        .single();
 
-      if (error) throw error;
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw fetchError;
+      }
 
-      toast.success("Profile created successfully!");
+      const profileData = {
+        id: user.id,
+        full_name: finalData.fullName,
+        stage: finalData.stage,
+        location: finalData.location,
+        industry: finalData.industry,
+        skills: finalData.skills,
+        looking_for: finalData.purposes, // Now correctly handled as array
+        availability: finalData.availability,
+        meeting_preference: finalData.meetingPreference,
+        bio: finalData.bio,
+        onboarding_completed: true,
+        updated_at: new Date().toISOString(),
+        project_stage: finalData.stage,
+        preferred_industries: [finalData.industry],
+        preferred_project_types: finalData.purposes,
+        motivation: finalData.bio
+      };
+
+      let error;
+      if (existingProfile) {
+        // Update existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id);
+        error = updateError;
+      } else {
+        // Create new profile
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert(profileData);
+        error = insertError;
+      }
+
+      if (error) {
+        console.error('Detailed error:', error);
+        throw error;
+      }
+
+      toast.success("Profile saved successfully!");
       navigate("/dashboard");
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast.error("Failed to save profile. Please try again.");
+      toast.error(
+        error instanceof Error 
+          ? `Failed to save profile: ${error.message}`
+          : "Failed to save profile. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }

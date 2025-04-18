@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +17,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tables } from "@/integrations/supabase/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MapPin } from "lucide-react";
 
 // Empty state for discover page
 const EmptyDiscoverState = () => (
@@ -35,6 +36,212 @@ const EmptyDiscoverState = () => (
 );
 
 type Profile = Tables<"profiles">;
+
+const ProfileCard = ({ profile }: { profile: Profile }) => {
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showFullProfile, setShowFullProfile] = useState(false);
+
+  const handleConnectionRequest = async () => {
+    if (!user) {
+      toast.error("Please sign in to send connection requests");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .insert({
+          requester_id: user.id,
+          recipient_id: profile.id,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+      toast.success("Connection request sent!");
+    } catch (error) {
+      console.error("Error sending connection request:", error);
+      toast.error("Failed to send connection request");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-md mx-auto hover:shadow-lg transition-shadow">
+      <CardHeader>
+        <div className="flex items-center space-x-4">
+          <Avatar className="h-12 w-12">
+            <AvatarImage src={profile.avatar_url || undefined} />
+            <AvatarFallback>{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
+          </Avatar>
+          <div>
+            <CardTitle>{profile.full_name}</CardTitle>
+            <CardDescription>{profile.title || profile.stage}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {profile.bio && (
+            <p className="text-sm text-muted-foreground">{profile.bio}</p>
+          )}
+          
+          {profile.project_description && (
+            <div>
+              <h4 className="text-sm font-medium mb-1">Project</h4>
+              <p className="text-sm text-muted-foreground">{profile.project_description}</p>
+            </div>
+          )}
+
+          {profile.skills && profile.skills.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium mb-1">Skills</h4>
+              <div className="flex flex-wrap gap-2">
+                {profile.skills.map((skill) => (
+                  <Badge key={skill} variant="secondary">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {profile.location && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 mr-2" />
+              {profile.location}
+            </div>
+          )}
+
+          {profile.looking_for && profile.looking_for.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium mb-1">Looking For</h4>
+              <div className="flex flex-wrap gap-2">
+                {profile.looking_for.map((item) => (
+                  <Badge key={item} variant="outline">
+                    {item}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setShowFullProfile(true)}
+        >
+          View Profile
+        </Button>
+        <Button
+          onClick={handleConnectionRequest}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "Connect"
+          )}
+        </Button>
+      </CardFooter>
+
+      {/* Full Profile Modal */}
+      {showFullProfile && (
+        <Dialog open={showFullProfile} onOpenChange={setShowFullProfile}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Full Profile</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={profile.avatar_url || undefined} />
+                  <AvatarFallback>{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="text-2xl font-bold">{profile.full_name}</h2>
+                  <p className="text-muted-foreground">{profile.title || profile.stage}</p>
+                </div>
+              </div>
+
+              {profile.bio && (
+                <div>
+                  <h3 className="font-medium mb-2">About</h3>
+                  <p className="text-muted-foreground">{profile.bio}</p>
+                </div>
+              )}
+
+              {profile.project_description && (
+                <div>
+                  <h3 className="font-medium mb-2">Project</h3>
+                  <p className="text-muted-foreground">{profile.project_description}</p>
+                  {profile.project_stage && (
+                    <Badge className="mt-2">{profile.project_stage}</Badge>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                {profile.skills && profile.skills.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-2">Skills</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.skills.map((skill) => (
+                        <Badge key={skill} variant="secondary">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {profile.looking_for && profile.looking_for.length > 0 && (
+                  <div>
+                    <h3 className="font-medium mb-2">Looking For</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {profile.looking_for.map((item) => (
+                        <Badge key={item} variant="outline">
+                          {item}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {profile.motivation && (
+                <div>
+                  <h3 className="font-medium mb-2">Motivation</h3>
+                  <p className="text-muted-foreground">{profile.motivation}</p>
+                </div>
+              )}
+
+              <div className="flex space-x-4">
+                {profile.linkedin_url && (
+                  <Button variant="outline" asChild>
+                    <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
+                      LinkedIn
+                    </a>
+                  </Button>
+                )}
+                {profile.portfolio_url && (
+                  <Button variant="outline" asChild>
+                    <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer">
+                      Portfolio
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </Card>
+  );
+};
 
 export default function DiscoverPage() {
   const { profiles, loading, error, refetchProfiles } = useDiscoverProfiles();
