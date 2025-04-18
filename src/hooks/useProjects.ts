@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
@@ -60,5 +61,25 @@ export const useProjects = (
           if (profileError) throw profileError;
 
           const profilesData = (rawProfiles || []) as Profile[];
+          
+          const profilesMap: Record<string, Profile> = {};
+          profilesData.forEach((profile) => {
+            profilesMap[profile.id] = profile;
+          });
 
-          const profiles
+          setCreators(profilesMap);
+        }
+
+        setLoading(false);
+      } catch (error: any) {
+        console.error("Error fetching projects:", error);
+        toast.error("Failed to load projects");
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [selectedCategory, selectedIndustry, selectedLocation, selectedSkill]);
+
+  return { projects, creators, loading };
+};
