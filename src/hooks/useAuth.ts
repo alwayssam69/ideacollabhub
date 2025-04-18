@@ -1,7 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+
+type SignUpMetadata = {
+  full_name?: string;
+  stage?: string;
+  location?: string;
+};
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -43,14 +49,40 @@ export const useAuth = () => {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, metadata?: SignUpMetadata) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: metadata?.full_name,
+            stage: metadata?.stage,
+            location: metadata?.location,
+          },
+        },
       });
       
       if (error) throw error;
+
+      // Create initial profile if signup was successful
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            full_name: metadata?.full_name,
+            stage: metadata?.stage,
+            location: metadata?.location,
+            onboarding_completed: false,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          toast.error('Error creating profile. Please try again.');
+        }
+      }
       
       return { success: true, error: null };
     } catch (error) {
