@@ -29,8 +29,11 @@ export const useProjects = (
       try {
         setLoading(true);
         
-        // Explicitly type the query result with correct generic syntax
-        type ProjectQueryResult = Awaited<ReturnType<typeof supabase.from<"projects">.select>>;
+        // Fix the type definition by using a simpler approach
+        type ProjectQueryResult = {
+          data: Project[] | null;
+          error: any;
+        };
         
         // Build the query
         let query = supabase
@@ -64,8 +67,11 @@ export const useProjects = (
           const userIds = [...new Set(projectsData.map(project => project.user_id))];
           
           if (userIds.length > 0) {
-            // Explicitly type the profiles query result with correct generic syntax
-            type ProfileQueryResult = Awaited<ReturnType<typeof supabase.from<"profiles">.select>>;
+            // Fix the type definition by using a simpler approach
+            type ProfileQueryResult = {
+              data: Profile[] | null;
+              error: any;
+            };
             
             const { data: profilesData, error: profilesError }: ProfileQueryResult = await supabase
               .from("profiles")
