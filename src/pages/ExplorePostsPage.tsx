@@ -70,7 +70,7 @@ export default function ExplorePostsPage() {
           <TabsContent value="startup">
             <ProjectList
               loading={loading}
-              projects={projects.filter(p => p.category === "startup")}
+              projects={projects.filter(p => p.duration === "startup")}
               creators={creators}
             />
           </TabsContent>
@@ -78,7 +78,7 @@ export default function ExplorePostsPage() {
           <TabsContent value="freelance">
             <ProjectList
               loading={loading}
-              projects={projects.filter(p => p.category === "freelance")}
+              projects={projects.filter(p => p.duration === "freelance")}
               creators={creators}
             />
           </TabsContent>
@@ -86,7 +86,7 @@ export default function ExplorePostsPage() {
           <TabsContent value="hackathon">
             <ProjectList
               loading={loading}
-              projects={projects.filter(p => p.category === "hackathon")}
+              projects={projects.filter(p => p.duration === "hackathon")}
               creators={creators}
             />
           </TabsContent>
@@ -94,7 +94,7 @@ export default function ExplorePostsPage() {
           <TabsContent value="research">
             <ProjectList
               loading={loading}
-              projects={projects.filter(p => p.category === "research")}
+              projects={projects.filter(p => p.duration === "research")}
               creators={creators}
             />
           </TabsContent>

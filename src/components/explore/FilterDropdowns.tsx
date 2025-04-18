@@ -35,12 +35,12 @@ export function FilterDropdowns({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="transition-all hover:scale-105">
             <Filter className="h-4 w-4 mr-2" />
-            Category
+            Project Type
             <ChevronDown className="h-4 w-4 ml-2" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="bg-background border shadow-md animate-fade-in">
-          <DropdownMenuItem onClick={() => setSelectedCategory(null)}>All Categories</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setSelectedCategory(null)}>All Types</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setSelectedCategory("startup")}>Startup Idea</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setSelectedCategory("freelance")}>Freelance Task</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setSelectedCategory("hackathon")}>Hackathon</DropdownMenuItem>

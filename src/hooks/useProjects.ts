@@ -27,7 +27,7 @@ export const useProjects = (
           .select("*");
           
         if (selectedCategory) {
-          query = query.eq("category", selectedCategory);
+          query = query.eq("duration", selectedCategory);
         }
         
         const { data: projectsData, error } = await query;
