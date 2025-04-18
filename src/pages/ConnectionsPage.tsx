@@ -16,12 +16,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Tables } from "@/integrations/supabase/types";
+import { type Tables } from "@/integrations/supabase/types";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type Profile = Tables<"profiles">;
-type Connection = Tables<"connections"> & {
+
+interface Connection {
+  id: string;
+  requester_id: string;
+  recipient_id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
   profile: Profile;
-};
+}
 
 export default function ConnectionsPage() {
   const { user } = useAuth();
@@ -37,35 +45,31 @@ export default function ConnectionsPage() {
       try {
         setLoading(true);
         
-        // Fetch accepted connections
-        const { data: acceptedConnections, error: acceptedError } = await supabase
+        const { data: sentConnections, error: sentError } = await supabase
           .from("connections")
           .select(`
             *,
             profile:profiles!recipient_id(*)
           `)
-          .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
-          .eq("status", "accepted");
+          .eq("requester_id", user.id)
+          .neq("status", "rejected");
 
-        if (acceptedError) throw acceptedError;
-
-        // Fetch pending requests received
-        const { data: pendingRequests, error: pendingError } = await supabase
+        const { data: receivedConnections, error: receivedError } = await supabase
           .from("connections")
           .select(`
             *,
             profile:profiles!requester_id(*)
           `)
           .eq("recipient_id", user.id)
-          .eq("status", "pending");
+          .neq("status", "rejected");
 
-        if (pendingError) throw pendingError;
+        if (sentError || receivedError) throw sentError || receivedError;
 
-        setConnections(acceptedConnections as Connection[]);
-        setPendingRequests(pendingRequests as Connection[]);
+        setConnections(sentConnections as unknown as Connection[]);
+        setPendingRequests(receivedConnections as unknown as Connection[]);
       } catch (error) {
         console.error("Error fetching connections:", error);
-        toast.error("Failed to load connections");
+        toast.error("Failed to fetch connections");
       } finally {
         setLoading(false);
       }
@@ -146,13 +150,12 @@ export default function ConnectionsPage() {
               <Card key={connection.id}>
                 <CardHeader>
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full overflow-hidden">
-                      <img
-                        src={connection.profile.avatar_url || "/default-avatar.png"}
-                        alt={connection.profile.full_name || "User"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={connection.profile.avatar_url} alt={connection.profile.full_name || "User"} />
+                      <AvatarFallback className="bg-slate-700 text-slate-300">
+                        {connection.profile.full_name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <CardTitle className="text-lg">{connection.profile.full_name}</CardTitle>
                       <CardDescription>{connection.profile.title}</CardDescription>
@@ -161,22 +164,54 @@ export default function ConnectionsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {connection.profile.skills && (
-                      <div>
-                        <div className="text-xs font-medium mb-1">Skills:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {connection.profile.skills.map((skill) => (
-                            <Badge key={skill} variant="outline" className="text-xs">
-                              {skill}
+                    {connection.profile.bio && (
+                      <CardDescription className="mt-2 text-gray-600">
+                        {connection.profile.bio}
+                      </CardDescription>
+                    )}
+                    {connection.profile.skills && connection.profile.skills.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {connection.profile.skills.map((skill, index) => (
+                          <Badge key={index} variant="secondary">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {connection.profile.looking_for && connection.profile.looking_for.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium text-gray-500">Interested in:</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {connection.profile.looking_for.map((interest, index) => (
+                            <Badge key={index} variant="outline">
+                              {interest}
                             </Badge>
                           ))}
                         </div>
                       </div>
                     )}
-                    {connection.profile.location && (
-                      <div>
-                        <div className="text-xs font-medium mb-1">Location:</div>
-                        <div className="text-sm">{connection.profile.location}</div>
+                    {(connection.profile.portfolio_url || connection.profile.linkedin_url) && (
+                      <div className="mt-4 flex gap-4">
+                        {connection.profile.portfolio_url && (
+                          <a
+                            href={connection.profile.portfolio_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            Portfolio
+                          </a>
+                        )}
+                        {connection.profile.linkedin_url && (
+                          <a
+                            href={connection.profile.linkedin_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            LinkedIn Profile
+                          </a>
+                        )}
                       </div>
                     )}
                     <div>
@@ -224,13 +259,12 @@ export default function ConnectionsPage() {
               <Card key={request.id}>
                 <CardHeader>
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-full overflow-hidden">
-                      <img
-                        src={request.profile.avatar_url || "/default-avatar.png"}
-                        alt={request.profile.full_name || "User"}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={request.profile.avatar_url} alt={request.profile.full_name || "User"} />
+                      <AvatarFallback className="bg-slate-700 text-slate-300">
+                        {request.profile.full_name?.[0]?.toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <CardTitle className="text-lg">{request.profile.full_name}</CardTitle>
                       <CardDescription>{request.profile.title}</CardDescription>

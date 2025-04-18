@@ -25,8 +25,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
 
 // Constants for dropdown options
 const INDUSTRY_OPTIONS = [
@@ -98,6 +100,7 @@ const professionalInfoSchema = z.object({
   availability: z.string().min(1, "Availability is required"),
   meetingPreference: z.string().min(1, "Meeting preference is required"),
   bio: z.string().min(10, "Bio should be at least 10 characters"),
+  profilePhoto: z.instanceof(File).optional(),
 });
 
 export default function OnboardingPage() {
@@ -106,6 +109,7 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState("");
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   const form = useForm<z.infer<typeof professionalInfoSchema>>({
     resolver: zodResolver(professionalInfoSchema),
@@ -116,6 +120,7 @@ export default function OnboardingPage() {
       availability: "",
       meetingPreference: "",
       bio: "",
+      profilePhoto: undefined,
     },
   });
 
@@ -128,6 +133,35 @@ export default function OnboardingPage() {
     setAvailableSkills(SKILLS_BY_INDUSTRY[value as keyof typeof SKILLS_BY_INDUSTRY] || []);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      form.setValue("profilePhoto", file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
+  };
+
+  const uploadProfilePhoto = async (file: File, userId: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}-${Math.random()}.${fileExt}`;
+    const filePath = `profile-photos/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('profile-photos')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('profile-photos')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const onSubmit = async (data: z.infer<typeof professionalInfoSchema>) => {
     setIsSubmitting(true);
 
@@ -135,6 +169,11 @@ export default function OnboardingPage() {
       if (!user) {
         toast.error("User not authenticated");
         return;
+      }
+
+      let avatarUrl = "";
+      if (data.profilePhoto) {
+        avatarUrl = await uploadProfilePhoto(data.profilePhoto, user.id);
       }
 
       const profileData = {
@@ -149,7 +188,8 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
         preferred_industries: [data.industry],
         preferred_project_types: data.purposes,
-        motivation: data.bio
+        motivation: data.bio,
+        avatar_url: avatarUrl
       };
 
       const { error } = await supabase
@@ -192,6 +232,28 @@ export default function OnboardingPage() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 <div className="grid grid-cols-1 gap-8">
+                  <FormField
+                    control={form.control}
+                    name="profilePhoto"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col items-center">
+                        <FormLabel className="text-sm font-medium text-slate-300 mb-4">
+                          Profile Photo
+                        </FormLabel>
+                        <ProfilePhotoUpload
+                          userId={user?.id || ""}
+                          currentPhotoUrl={previewUrl}
+                          onPhotoUpdate={(url) => {
+                            setPreviewUrl(url);
+                            field.onChange(url);
+                          }}
+                          size="lg"
+                        />
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="industry"

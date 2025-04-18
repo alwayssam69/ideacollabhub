@@ -34,6 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
+import { type Tables } from "@/integrations/supabase/types";
 
 const profileFormSchema = z.object({
   full_name: z.string().min(2, {
@@ -59,12 +63,16 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
+type Profile = Tables<"profiles">;
+
 export default function ProfilePage() {
   const { profile, loading, error, updateProfile } = useProfile();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [newSkill, setNewSkill] = useState("");
   const [newIndustry, setNewIndustry] = useState("");
   const [newProjectType, setNewProjectType] = useState("");
+  const [formData, setFormData] = useState<Partial<Profile>>({});
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -105,6 +113,29 @@ export default function ProfilePage() {
       });
     }
   }, [profile, form]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (error) throw error;
+
+        setFormData(data);
+      } catch (error) {
+        console.error("Error fetching profile:", error);
+        toast.error("Failed to fetch profile");
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
 
   async function onSubmit(data: ProfileFormValues) {
     try {
@@ -164,6 +195,26 @@ export default function ProfilePage() {
     updateProfile({
       preferred_project_types: profile?.preferred_project_types?.filter(type => type !== typeToRemove) || [],
     });
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update(formData)
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      setFormData(formData as Profile);
+      setIsEditing(false);
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    }
   };
 
   if (loading) {
@@ -298,6 +349,17 @@ export default function ProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  <div className="flex flex-col items-center">
+                    <ProfilePhotoUpload
+                      userId={user.id}
+                      currentPhotoUrl={profile?.avatar_url}
+                      onPhotoUpdate={(url) => {
+                        setFormData((prev) => ({ ...prev, avatar_url: url }));
+                      }}
+                      size="lg"
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
