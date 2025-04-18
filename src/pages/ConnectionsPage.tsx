@@ -1,4 +1,4 @@
-
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,77 +11,120 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Check, MessageCircle, User, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Tables } from "@/integrations/supabase/types";
 
-// Mock data for connections
-const mockConnections = [
-  {
-    id: 1,
-    name: "Alex Johnson",
-    title: "Full Stack Developer",
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    skills: ["React", "Node.js", "TypeScript"],
-    location: "San Francisco, CA",
-    connectionDate: "2 days ago",
-    status: "connected",
-  },
-  {
-    id: 2,
-    name: "Sarah Lee",
-    title: "UI/UX Designer",
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    skills: ["Figma", "Adobe XD", "UI Design"],
-    location: "New York, NY",
-    connectionDate: "1 week ago",
-    status: "connected",
-  },
-];
-
-// Mock data for pending requests
-const mockPendingRequests = [
-  {
-    id: 3,
-    name: "Michael Chen",
-    title: "Product Manager",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    skills: ["Product Strategy", "Market Research", "Agile"],
-    location: "Austin, TX",
-    requestDate: "3 days ago",
-    status: "pending",
-  },
-  {
-    id: 4,
-    name: "Emily Rodriguez",
-    title: "Marketing Specialist",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    skills: ["Social Media", "Content Marketing", "SEO"],
-    location: "Chicago, IL",
-    requestDate: "5 days ago",
-    status: "pending",
-  },
-];
+type Profile = Tables<"profiles">;
+type Connection = Tables<"connections"> & {
+  profile: Profile;
+};
 
 export default function ConnectionsPage() {
-  const [connections, setConnections] = useState(mockConnections);
-  const [pendingRequests, setPendingRequests] = useState(mockPendingRequests);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Connection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAcceptRequest = (requestId: number) => {
-    const request = pendingRequests.find(req => req.id === requestId);
-    if (request) {
-      setConnections([...connections, { ...request, status: "connected", connectionDate: "Just now" }]);
-      setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
-      toast.success(`Connection request from ${request.name} accepted!`);
+  useEffect(() => {
+    const fetchConnections = async () => {
+      if (!user) return;
+
+      try {
+        setLoading(true);
+        
+        // Fetch accepted connections
+        const { data: acceptedConnections, error: acceptedError } = await supabase
+          .from("connections")
+          .select(`
+            *,
+            profile:profiles!recipient_id(*)
+          `)
+          .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
+          .eq("status", "accepted");
+
+        if (acceptedError) throw acceptedError;
+
+        // Fetch pending requests received
+        const { data: pendingRequests, error: pendingError } = await supabase
+          .from("connections")
+          .select(`
+            *,
+            profile:profiles!requester_id(*)
+          `)
+          .eq("recipient_id", user.id)
+          .eq("status", "pending");
+
+        if (pendingError) throw pendingError;
+
+        setConnections(acceptedConnections as Connection[]);
+        setPendingRequests(pendingRequests as Connection[]);
+      } catch (error) {
+        console.error("Error fetching connections:", error);
+        toast.error("Failed to load connections");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConnections();
+  }, [user]);
+
+  const handleAcceptRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ status: "accepted" })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      // Update local state
+      const acceptedRequest = pendingRequests.find(req => req.id === requestId);
+      if (acceptedRequest) {
+        setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+        setConnections(prev => [...prev, { ...acceptedRequest, status: "accepted" }]);
+      }
+      
+      toast.success("Connection request accepted!");
+    } catch (error) {
+      console.error("Error accepting request:", error);
+      toast.error("Failed to accept request");
     }
   };
 
-  const handleRejectRequest = (requestId: number) => {
-    const request = pendingRequests.find(req => req.id === requestId);
-    if (request) {
-      setPendingRequests(pendingRequests.filter(req => req.id !== requestId));
-      toast.info(`Connection request from ${request.name} declined.`);
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ status: "rejected" })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      // Update local state
+      setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+      toast.success("Connection request declined");
+    } catch (error) {
+      console.error("Error rejecting request:", error);
+      toast.error("Failed to decline request");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="container py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading connections...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container py-8">
@@ -105,45 +148,58 @@ export default function ConnectionsPage() {
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-full overflow-hidden">
                       <img
-                        src={connection.image}
-                        alt={connection.name}
+                        src={connection.profile.avatar_url || "/default-avatar.png"}
+                        alt={connection.profile.full_name || "User"}
                         className="h-full w-full object-cover"
                       />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{connection.name}</CardTitle>
-                      <CardDescription>{connection.title}</CardDescription>
+                      <CardTitle className="text-lg">{connection.profile.full_name}</CardTitle>
+                      <CardDescription>{connection.profile.title}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div>
-                      <div className="text-xs font-medium mb-1">Skills:</div>
-                      <div className="flex flex-wrap gap-1">
-                        {connection.skills.map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
+                    {connection.profile.skills && (
+                      <div>
+                        <div className="text-xs font-medium mb-1">Skills:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {connection.profile.skills.map((skill) => (
+                            <Badge key={skill} variant="outline" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium mb-1">Location:</div>
-                      <div className="text-sm">{connection.location}</div>
-                    </div>
+                    )}
+                    {connection.profile.location && (
+                      <div>
+                        <div className="text-xs font-medium mb-1">Location:</div>
+                        <div className="text-sm">{connection.profile.location}</div>
+                      </div>
+                    )}
                     <div>
                       <div className="text-xs font-medium mb-1">Connected:</div>
-                      <div className="text-sm">{connection.connectionDate}</div>
+                      <div className="text-sm">
+                        {new Date(connection.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => navigate(`/profile/${connection.profile.id}`)}
+                  >
                     <User className="mr-2 h-4 w-4" />
                     View Profile
                   </Button>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    onClick={() => navigate(`/messages?userId=${connection.profile.id}`)}
+                  >
                     <MessageCircle className="mr-2 h-4 w-4" />
                     Message
                   </Button>
@@ -170,36 +226,42 @@ export default function ConnectionsPage() {
                   <div className="flex items-center gap-4">
                     <div className="h-12 w-12 rounded-full overflow-hidden">
                       <img
-                        src={request.image}
-                        alt={request.name}
+                        src={request.profile.avatar_url || "/default-avatar.png"}
+                        alt={request.profile.full_name || "User"}
                         className="h-full w-full object-cover"
                       />
                     </div>
                     <div>
-                      <CardTitle className="text-lg">{request.name}</CardTitle>
-                      <CardDescription>{request.title}</CardDescription>
+                      <CardTitle className="text-lg">{request.profile.full_name}</CardTitle>
+                      <CardDescription>{request.profile.title}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div>
-                      <div className="text-xs font-medium mb-1">Skills:</div>
-                      <div className="flex flex-wrap gap-1">
-                        {request.skills.map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
+                    {request.profile.skills && (
+                      <div>
+                        <div className="text-xs font-medium mb-1">Skills:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {request.profile.skills.map((skill) => (
+                            <Badge key={skill} variant="outline" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium mb-1">Location:</div>
-                      <div className="text-sm">{request.location}</div>
-                    </div>
+                    )}
+                    {request.profile.location && (
+                      <div>
+                        <div className="text-xs font-medium mb-1">Location:</div>
+                        <div className="text-sm">{request.profile.location}</div>
+                      </div>
+                    )}
                     <div>
                       <div className="text-xs font-medium mb-1">Request Date:</div>
-                      <div className="text-sm">{request.requestDate}</div>
+                      <div className="text-sm">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </div>
                     </div>
                   </div>
                 </CardContent>

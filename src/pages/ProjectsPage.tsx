@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,108 +30,129 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { useNavigate } from "react-router-dom";
 
-// Mock data for projects
-const mockProjects = [
-  {
-    id: 1,
-    title: "AI-Powered Task Management App",
-    description:
-      "Looking to build a task management app that uses AI to prioritize and suggest tasks for users. Need developers and UI/UX designers.",
-    createdBy: "Alex Johnson",
-    userImage: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    requiredSkills: ["React Native", "Machine Learning", "UI/UX Design"],
-    lookingFor: "Co-founder",
-    duration: "3-6 months",
-    likes: 24,
-    comments: 8,
-  },
-  {
-    id: 2,
-    title: "Sustainable Fashion Marketplace",
-    description:
-      "Building a platform to connect sustainable fashion brands with conscious consumers. Need someone with marketing and e-commerce experience.",
-    createdBy: "Sarah Lee",
-    userImage: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    requiredSkills: ["Marketing", "E-commerce", "Sustainability"],
-    lookingFor: "Marketing Expert",
-    duration: "Ongoing",
-    likes: 32,
-    comments: 12,
-  },
-  {
-    id: 3,
-    title: "Blockchain-based Voting System",
-    description:
-      "Developing a secure voting system using blockchain technology for organizational decision making. Looking for blockchain developers and security experts.",
-    createdBy: "Michael Chen",
-    userImage: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-    requiredSkills: ["Blockchain", "Smart Contracts", "Security"],
-    lookingFor: "Developer",
-    duration: "6-12 months",
-    likes: 18,
-    comments: 5,
-  },
-];
+type Project = Tables<"projects">;
+type Profile = Tables<"profiles">;
+
+interface ProjectWithCreator extends Project {
+  creator: Profile;
+}
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState(mockProjects);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [projects, setProjects] = useState<ProjectWithCreator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newProject, setNewProject] = useState({
     title: "",
     description: "",
-    requiredSkills: "",
-    lookingFor: "",
+    required_skills: [] as string[],
+    looking_for: "",
     duration: "",
+    project_type: "",
   });
-  const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleCreateProject = () => {
-    // In a real app, this would connect to Supabase to save the project
-    const skills = newProject.requiredSkills.split(",").map(skill => skill.trim());
-    
-    const project = {
-      id: projects.length + 1,
-      title: newProject.title,
-      description: newProject.description,
-      createdBy: "You", // In a real app, this would be the current user
-      userImage: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80", // Placeholder
-      requiredSkills: skills,
-      lookingFor: newProject.lookingFor,
-      duration: newProject.duration,
-      likes: 0,
-      comments: 0,
-    };
-    
-    setProjects([project, ...projects]);
-    setDialogOpen(false);
-    toast.success("Project created successfully!");
-    
-    // Reset form
-    setNewProject({
-      title: "",
-      description: "",
-      requiredSkills: "",
-      lookingFor: "",
-      duration: "",
-    });
+  useEffect(() => {
+    fetchProjects();
+  }, [user]);
+
+  const fetchProjects = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data: projectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select(`
+          *,
+          creator:profiles!user_id(*)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (projectsError) throw projectsError;
+
+      setProjects(projectsData as ProjectWithCreator[]);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+      toast.error("Failed to load projects");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLike = (projectId: number) => {
-    setProjects(
-      projects.map((project) => {
-        if (project.id === projectId) {
-          return { ...project, likes: project.likes + 1 };
-        }
-        return project;
-      })
+  const handleCreateProject = async () => {
+    if (!user) {
+      toast.error("Please sign in to create a project");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const projectData = {
+        title: newProject.title,
+        description: newProject.description,
+        required_skills: newProject.required_skills,
+        looking_for: newProject.looking_for,
+        duration: newProject.duration,
+        project_type: newProject.project_type,
+        user_id: user.id,
+        status: "active",
+      };
+
+      const { data: project, error } = await supabase
+        .from("projects")
+        .insert(projectData)
+        .select(`
+          *,
+          creator:profiles!user_id(*)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      setProjects(prev => [project as ProjectWithCreator, ...prev]);
+      setDialogOpen(false);
+      toast.success("Project created successfully!");
+
+      // Reset form
+      setNewProject({
+        title: "",
+        description: "",
+        required_skills: [],
+        looking_for: "",
+        duration: "",
+        project_type: "",
+      });
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast.error("Failed to create project");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container py-8 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
     );
-    toast.success("Project liked!");
-  };
+  }
 
   return (
     <div className="container py-8">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Projects</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Projects</h1>
+          <p className="text-muted-foreground mt-1">Create or join exciting projects</p>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -171,8 +191,11 @@ export default function ProjectsPage() {
                 <Label htmlFor="skills">Required Skills (comma separated)</Label>
                 <Input
                   id="skills"
-                  value={newProject.requiredSkills}
-                  onChange={(e) => setNewProject({ ...newProject, requiredSkills: e.target.value })}
+                  value={newProject.required_skills.join(", ")}
+                  onChange={(e) => setNewProject({ 
+                    ...newProject, 
+                    required_skills: e.target.value.split(",").map(s => s.trim()).filter(Boolean)
+                  })}
                   placeholder="React, Design, Marketing, etc."
                 />
               </div>
@@ -180,8 +203,8 @@ export default function ProjectsPage() {
                 <div className="grid gap-2">
                   <Label htmlFor="lookingFor">Looking For</Label>
                   <Select
-                    onValueChange={(value) => setNewProject({ ...newProject, lookingFor: value })}
-                    defaultValue={newProject.lookingFor}
+                    onValueChange={(value) => setNewProject({ ...newProject, looking_for: value })}
+                    value={newProject.looking_for}
                   >
                     <SelectTrigger id="lookingFor">
                       <SelectValue placeholder="Select role" />
@@ -190,9 +213,27 @@ export default function ProjectsPage() {
                       <SelectItem value="Co-founder">Co-founder</SelectItem>
                       <SelectItem value="Developer">Developer</SelectItem>
                       <SelectItem value="Designer">Designer</SelectItem>
-                      <SelectItem value="Marketing Expert">Marketing Expert</SelectItem>
+                      <SelectItem value="Marketing">Marketing Expert</SelectItem>
                       <SelectItem value="Project Manager">Project Manager</SelectItem>
                       <SelectItem value="Advisor">Advisor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="projectType">Project Type</Label>
+                  <Select
+                    onValueChange={(value) => setNewProject({ ...newProject, project_type: value })}
+                    value={newProject.project_type}
+                  >
+                    <SelectTrigger id="projectType">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="freelance">Freelance</SelectItem>
+                      <SelectItem value="hackathon">Hackathon</SelectItem>
+                      <SelectItem value="research">Research</SelectItem>
+                      <SelectItem value="open-source">Open Source</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -200,7 +241,7 @@ export default function ProjectsPage() {
                   <Label htmlFor="duration">Duration</Label>
                   <Select
                     onValueChange={(value) => setNewProject({ ...newProject, duration: value })}
-                    defaultValue={newProject.duration}
+                    value={newProject.duration}
                   >
                     <SelectTrigger id="duration">
                       <SelectValue placeholder="Select duration" />
@@ -218,8 +259,12 @@ export default function ProjectsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" onClick={handleCreateProject}>
-                Create Project
+              <Button 
+                type="submit" 
+                onClick={handleCreateProject}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating..." : "Create Project"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -227,69 +272,84 @@ export default function ProjectsPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project) => (
-          <Card key={project.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-8 w-8 rounded-full overflow-hidden">
-                  <img
-                    src={project.userImage}
-                    alt={project.createdBy}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="text-sm font-medium">{project.createdBy}</div>
-              </div>
-              <CardTitle className="line-clamp-2">{project.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-muted-foreground line-clamp-3 mb-4">
-                {project.description}
+        {projects.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <div className="max-w-md mx-auto">
+              <h3 className="text-lg font-semibold mb-2">No Projects Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Be the first to create a project and find collaborators!
               </p>
-              <div className="space-y-3">
-                <div>
-                  <div className="text-xs font-medium mb-1">Required Skills:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {project.requiredSkills.map((skill) => (
-                      <Badge key={skill} variant="outline" className="text-xs">
-                        {skill}
-                      </Badge>
-                    ))}
+              <Button onClick={() => setDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create Your First Project
+              </Button>
+            </div>
+          </div>
+        ) : (
+          projects.map((project) => (
+            <Card key={project.id} className="flex flex-col">
+              <CardHeader>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="h-8 w-8 rounded-full overflow-hidden">
+                    <img
+                      src={project.creator.avatar_url || "/default-avatar.png"}
+                      alt={project.creator.full_name || "User"}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="text-sm font-medium">{project.creator.full_name}</div>
+                </div>
+                <CardTitle className="line-clamp-2">{project.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1">
+                <p className="text-muted-foreground line-clamp-3 mb-4">
+                  {project.description}
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs font-medium mb-1">Required Skills:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {project.required_skills?.map((skill) => (
+                        <Badge key={skill} variant="outline" className="text-xs">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-xs font-medium mb-1">Looking for:</div>
+                      <div className="text-sm">{project.looking_for}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium mb-1">Duration:</div>
+                      <div className="text-sm">{project.duration}</div>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="text-xs font-medium mb-1">Looking for:</div>
-                    <div className="text-sm">{project.lookingFor}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-medium mb-1">Duration:</div>
-                    <div className="text-sm">{project.duration}</div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4 flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1"
-                onClick={() => handleLike(project.id)}
-              >
-                <ThumbsUp className="h-4 w-4" />
-                <span>{project.likes}</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                <MessageCircle className="h-4 w-4" />
-                <span>{project.comments}</span>
-              </Button>
-              <Button variant="default" size="sm">
-                <User className="mr-2 h-4 w-4" />
-                Connect
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+              </CardContent>
+              <CardFooter className="flex justify-between border-t pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={() => navigate(`/profile/${project.creator.id}`)}
+                >
+                  <User className="h-4 w-4" />
+                  View Profile
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  onClick={() => navigate(`/messages?userId=${project.creator.id}`)}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Contact
+                </Button>
+              </CardFooter>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
