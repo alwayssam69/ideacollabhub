@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Send, UserPlus, AlertCircle, MessageSquare, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tables } from "@/integrations/supabase/types";
 import { toast } from "sonner";
+import { useConnectionRequests } from "@/hooks/useConnectionRequests";
+import { AnimatePresence, motion } from "framer-motion";
 
 type Message = Tables<"messages"> & {
   sender_profile?: Tables<"profiles">;
@@ -24,6 +27,7 @@ type Conversation = {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const { sentRequests, requests } = useConnectionRequests();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -31,6 +35,23 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Filter conversations based on search query
+  const filteredConversations = searchQuery
+    ? conversations.filter(convo => 
+        convo.profile.full_name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : conversations;
 
   // Fetch conversations (connections with messages)
   useEffect(() => {
@@ -39,21 +60,13 @@ export default function MessagesPage() {
       setLoading(true);
       
       try {
-        // Get all user connections
-        const { data: connectionsData, error: connectionsError } = await supabase
-          .from("connections")
-          .select(`
-            *,
-            profile:profiles!recipient_id(*)
-          `)
-          .eq("requester_id", user.id)
-          .eq("status", "accepted");
-          
-        if (connectionsError) throw connectionsError;
+        // Get all accepted connections
+        const acceptedConnections = [
+          ...(sentRequests || []).filter(req => req.status === 'accepted'),
+          ...(requests || []).filter(req => req.status === 'accepted')
+        ];
         
-        const connections = connectionsData as any[];
-        
-        if (!connections || connections.length === 0) {
+        if (acceptedConnections.length === 0) {
           setLoading(false);
           return;
         }
@@ -61,13 +74,23 @@ export default function MessagesPage() {
         // Create array of conversation objects
         const conversationsArray: Conversation[] = [];
         
-        for (const connection of connections) {
+        for (const connection of acceptedConnections) {
+          // Determine the other user in the connection
+          const otherUserId = connection.requester_id === user.id 
+            ? connection.recipient_id 
+            : connection.requester_id;
+          
+          const profile = connection.requester_id === user.id 
+            ? connection.recipient 
+            : connection.requester;
+            
+          if (!profile) continue;
+          
           // Get last message for this connection
           const { data: messageData } = await supabase
             .from("messages")
             .select("*")
-            .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-            .or(`sender_id.eq.${connection.profile.id},recipient_id.eq.${connection.profile.id}`)
+            .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
             .order("created_at", { ascending: false })
             .limit(1);
             
@@ -76,21 +99,36 @@ export default function MessagesPage() {
             .from("messages")
             .select("*", { count: "exact" })
             .eq("recipient_id", user.id)
-            .eq("sender_id", connection.profile.id)
+            .eq("sender_id", otherUserId)
             .eq("read", false);
             
           conversationsArray.push({
-            profile: connection.profile,
+            profile,
             lastMessage: messageData && messageData.length > 0 ? messageData[0] : null,
             unreadCount: unreadCount || 0
           });
         }
         
+        // Sort conversations by most recent message
+        conversationsArray.sort((a, b) => {
+          const dateA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
+          const dateB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
+        
         setConversations(conversationsArray);
         
-        // Select the first conversation by default if there is one
-        if (conversationsArray.length > 0) {
+        // Select the first conversation by default if there is one and none is selected
+        if (conversationsArray.length > 0 && !selectedConversation) {
           setSelectedConversation(conversationsArray[0]);
+        } else if (selectedConversation) {
+          // Update the selected conversation with fresh data
+          const updatedConversation = conversationsArray.find(
+            conv => conv.profile.id === selectedConversation.profile.id
+          );
+          if (updatedConversation) {
+            setSelectedConversation(updatedConversation);
+          }
         }
       } catch (error) {
         console.error("Error fetching conversations:", error);
@@ -101,7 +139,7 @@ export default function MessagesPage() {
     };
     
     fetchConversations();
-  }, [user]);
+  }, [user, sentRequests, requests, selectedConversation?.profile.id]);
   
   // Fetch messages for selected conversation
   useEffect(() => {
@@ -139,6 +177,9 @@ export default function MessagesPage() {
             )
           );
         }
+        
+        // Scroll to bottom after messages load
+        setTimeout(scrollToBottom, 100);
       } catch (error) {
         console.error("Error fetching messages:", error);
         toast.error("Failed to load messages");
@@ -148,7 +189,54 @@ export default function MessagesPage() {
     };
     
     fetchMessages();
+    
+    // Set up real-time subscription for messages
+    if (user && selectedConversation) {
+      const channel = supabase
+        .channel(`messages-${selectedConversation.profile.id}`)
+        .on('postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'messages',
+            filter: `recipient_id=eq.${user.id}` 
+          }, 
+          async (payload) => {
+            console.log('New message received:', payload);
+            
+            // Only process if from current conversation
+            if (payload.new && payload.new.sender_id === selectedConversation.profile.id) {
+              // Add new message to state
+              const newMessage = payload.new as Message;
+              setMessages(prev => [...prev, newMessage]);
+              
+              // Mark message as read
+              await supabase
+                .from("messages")
+                .update({ read: true })
+                .eq("id", newMessage.id);
+                
+              // Scroll to bottom to show new message
+              setTimeout(scrollToBottom, 100);
+            }
+            
+            // Refresh conversations to update last message and unread count
+            const { refresh } = useConnectionRequests();
+            refresh();
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user, selectedConversation]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !user) return;
@@ -185,6 +273,9 @@ export default function MessagesPage() {
               : conv
           )
         );
+        
+        // Scroll to bottom to show new message
+        setTimeout(scrollToBottom, 100);
       }
       
       setNewMessage("");
@@ -200,27 +291,44 @@ export default function MessagesPage() {
     setSelectedConversation(conversation);
   };
 
+  // Format date for messages
+  const formatMessageDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    
+    if (isToday) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) + 
+        ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  };
+
   // Empty state for no conversations
   const EmptyConversations = () => (
-    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-      <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-        <Send className="h-8 w-8 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center animate-fade-in">
+      <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+        <MessageSquare className="h-8 w-8 text-primary" />
       </div>
       <h3 className="font-medium text-lg">No conversations yet</h3>
       <p className="text-muted-foreground text-sm mt-2 mb-4 max-w-xs">
         Connect with people to start chatting with them
       </p>
-      <Button asChild>
-        <a href="/discover">Find Connections</a>
+      <Button asChild className="bg-primary hover:bg-primary/90 transition-all">
+        <a href="/discover">
+          <UserPlus className="mr-2 h-4 w-4" />
+          Find Connections
+        </a>
       </Button>
     </div>
   );
 
   // Empty state for no messages
   const EmptyMessages = () => (
-    <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-      <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
-        <Send className="h-8 w-8 text-muted-foreground" />
+    <div className="flex flex-col items-center justify-center h-full p-6 text-center animate-fade-in">
+      <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+        <MessageSquare className="h-8 w-8 text-primary" />
       </div>
       <h3 className="font-medium text-lg">No messages yet</h3>
       <p className="text-muted-foreground text-sm mt-2">
@@ -245,27 +353,32 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-8">Messages</h1>
+    <div className="container py-8 animate-fade-in">
+      <h1 className="text-3xl font-bold mb-8 text-gradient-primary">Messages</h1>
 
-      <div className="border rounded-lg overflow-hidden grid grid-cols-1 md:grid-cols-3 h-[calc(100vh-16rem)] shadow-md">
+      <div className="border rounded-lg overflow-hidden grid grid-cols-1 md:grid-cols-3 h-[calc(100vh-16rem)] shadow-md bg-card/20 backdrop-blur-md">
         {/* Conversation List */}
         <div className="border-r">
-          <div className="p-4 border-b">
-            <Input 
-              placeholder="Search conversations..." 
-              className="transition-all focus:border-primary focus:ring-primary"
-            />
+          <div className="p-4 border-b glass-effect">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input 
+                placeholder="Search conversations..." 
+                className="pl-9 transition-all focus:border-primary focus:ring-primary bg-background/50"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
           <ScrollArea className="h-[calc(100vh-16rem-65px)]">
             {loading ? (
               <ConversationSkeleton />
-            ) : conversations.length > 0 ? (
-              conversations.map((conversation) => (
+            ) : filteredConversations.length > 0 ? (
+              filteredConversations.map((conversation) => (
                 <div
                   key={conversation.profile.id}
                   className={cn(
-                    "flex items-center gap-4 p-4 border-b hover:bg-muted cursor-pointer transition-colors",
+                    "flex items-center gap-4 p-4 border-b hover:bg-muted/50 cursor-pointer transition-all duration-200 hover:scale-[1.01]",
                     selectedConversation?.profile.id === conversation.profile.id && "bg-muted"
                   )}
                   onClick={() => selectConversation(conversation)}
@@ -274,12 +387,12 @@ export default function MessagesPage() {
                     <div className="h-12 w-12 rounded-full overflow-hidden">
                       <Avatar className="h-full w-full border border-border/50 ring-2 ring-background">
                         <AvatarImage src={conversation.profile.avatar_url || ""} />
-                        <AvatarFallback>
+                        <AvatarFallback className="bg-primary/20 text-primary">
                           {(conversation.profile.full_name || "User")[0].toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </div>
-                    {/* We don't have online status so removing this for now */}
+                    {/* Online status indicator - will be implemented later */}
                     {/* <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span> */}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -289,7 +402,7 @@ export default function MessagesPage() {
                       </h3>
                       <span className="text-xs text-muted-foreground">
                         {conversation.lastMessage 
-                          ? new Date(conversation.lastMessage.created_at).toLocaleDateString() 
+                          ? formatMessageDate(conversation.lastMessage.created_at)
                           : ""}
                       </span>
                     </div>
@@ -315,16 +428,16 @@ export default function MessagesPage() {
         </div>
 
         {/* Message Area */}
-        <div className="col-span-2 flex flex-col">
+        <div className="col-span-2 flex flex-col bg-background/50">
           {selectedConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b flex items-center gap-4 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+              <div className="p-4 border-b flex items-center gap-4 bg-background/95 backdrop-blur-sm sticky top-0 z-10 glass-effect">
                 <div className="relative">
                   <div className="h-10 w-10 rounded-full overflow-hidden">
                     <Avatar>
                       <AvatarImage src={selectedConversation.profile.avatar_url || ""} />
-                      <AvatarFallback>
+                      <AvatarFallback className="bg-primary/20 text-primary">
                         {(selectedConversation.profile.full_name || "User")[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -341,7 +454,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                 {loadingMessages ? (
                   <div className="space-y-4">
                     {Array(3).fill(0).map((_, i) => (
@@ -352,38 +465,44 @@ export default function MessagesPage() {
                   </div>
                 ) : messages.length > 0 ? (
                   <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={cn(
-                          "flex animate-fade-in",
-                          message.sender_id === user?.id
-                            ? "justify-end"
-                            : "justify-start"
-                        )}
-                      >
-                        <div
+                    <AnimatePresence>
+                      {messages.map((message) => (
+                        <motion.div
+                          key={message.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3 }}
                           className={cn(
-                            "rounded-lg px-4 py-2 max-w-[80%] shadow-sm hover:shadow-md transition-shadow",
+                            "flex",
                             message.sender_id === user?.id
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
+                              ? "justify-end"
+                              : "justify-start"
                           )}
                         >
-                          <p className="text-sm">{message.content}</p>
-                          <span
+                          <div
                             className={cn(
-                              "text-xs block text-right mt-1",
+                              "rounded-lg px-4 py-2 max-w-[80%] transition-all hover:shadow-md",
                               message.sender_id === user?.id
-                                ? "text-primary-foreground/80"
-                                : "text-muted-foreground"
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted glass-effect"
                             )}
                           >
-                            {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                            <p className="text-sm">{message.content}</p>
+                            <span
+                              className={cn(
+                                "text-xs block text-right mt-1",
+                                message.sender_id === user?.id
+                                  ? "text-primary-foreground/80"
+                                  : "text-muted-foreground"
+                              )}
+                            >
+                              {formatMessageDate(message.created_at)}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    <div ref={messagesEndRef} />
                   </div>
                 ) : (
                   <EmptyMessages />
@@ -391,7 +510,7 @@ export default function MessagesPage() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="p-4 border-t bg-background/95 backdrop-blur-sm">
+              <div className="p-4 border-t bg-background/95 backdrop-blur-sm glass-effect">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -403,14 +522,14 @@ export default function MessagesPage() {
                     placeholder="Type a message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="transition-all focus:border-primary focus:ring-primary"
+                    className="transition-all focus:border-primary focus:ring-primary bg-background/50"
                     disabled={sendingMessage}
                   />
                   <Button 
                     type="submit" 
                     size="icon"
                     disabled={sendingMessage || !newMessage.trim()}
-                    className="bg-primary hover:bg-primary/90 transition-colors"
+                    className="bg-primary hover:bg-primary/90 transition-all"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
@@ -418,9 +537,12 @@ export default function MessagesPage() {
               </div>
             </>
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">
-                Select a conversation to start chatting
+            <div className="flex flex-col items-center justify-center h-full p-6 animate-fade-in">
+              <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="h-8 w-8 text-primary/80" />
+              </div>
+              <p className="text-muted-foreground text-center max-w-md">
+                Select a conversation to start chatting or find new connections on the <a href="/discover" className="text-primary hover:underline">Discover page</a>
               </p>
             </div>
           )}

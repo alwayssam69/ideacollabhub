@@ -7,6 +7,7 @@ import { useConnectionRequests } from "@/hooks/useConnectionRequests";
 import { FilterDropdowns } from "@/components/explore/FilterDropdowns";
 import { ProjectList } from "@/components/explore/ProjectList";
 import { useProjects } from "@/hooks/useProjects";
+import { motion } from "framer-motion";
 
 export default function ExplorePostsPage() {
   const { user } = useAuth();
@@ -25,27 +26,32 @@ export default function ExplorePostsPage() {
 
   return (
     <div className="container py-8">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4"
+      >
         <div>
-          <h1 className="text-3xl font-bold animate-fade-in">Explore Projects</h1>
+          <h1 className="text-3xl font-bold text-gradient-primary">Explore Projects</h1>
           <p className="text-muted-foreground mt-1">
             Discover projects and collaborate with others
           </p>
         </div>
-        <Button className="shrink-0 bg-primary hover:bg-primary/90 transition-all shadow hover:shadow-md">
+        <Button className="shrink-0 bg-primary hover:bg-primary/90 transition-all shadow hover:shadow-md hover:scale-105">
           <Plus className="h-4 w-4 mr-2" />
           Create Project
         </Button>
-      </div>
+      </motion.div>
 
       <div className="mb-6">
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="all" className="transition-all">All Projects</TabsTrigger>
-            <TabsTrigger value="startup" className="transition-all">Startup Ideas</TabsTrigger>
-            <TabsTrigger value="freelance" className="transition-all">Freelance Tasks</TabsTrigger>
-            <TabsTrigger value="hackathon" className="transition-all">Hackathon</TabsTrigger>
-            <TabsTrigger value="research" className="transition-all">Research</TabsTrigger>
+          <TabsList className="mb-6 bg-muted/50 backdrop-blur-sm">
+            <TabsTrigger value="all" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">All Projects</TabsTrigger>
+            <TabsTrigger value="startup" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Startup Ideas</TabsTrigger>
+            <TabsTrigger value="freelance" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Freelance Tasks</TabsTrigger>
+            <TabsTrigger value="hackathon" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Hackathon</TabsTrigger>
+            <TabsTrigger value="research" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Research</TabsTrigger>
           </TabsList>
           
           <FilterDropdowns

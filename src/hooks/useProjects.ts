@@ -30,11 +30,23 @@ export const useProjects = (
           query = query.eq("duration", selectedCategory);
         }
         
+        if (selectedIndustry) {
+          query = query.eq("industry", selectedIndustry);
+        }
+        
+        if (selectedLocation) {
+          query = query.eq("location", selectedLocation);
+        }
+        
+        if (selectedSkill) {
+          query = query.contains("required_skills", [selectedSkill]);
+        }
+        
         const { data: projectsData, error } = await query;
         
         if (error) throw error;
         
-        if (projectsData) {
+        if (projectsData && projectsData.length > 0) {
           setProjects(projectsData);
           
           const userIds = [...new Set(projectsData.map(project => project.user_id))];
@@ -55,6 +67,9 @@ export const useProjects = (
               setCreators(profilesMap);
             }
           }
+        } else {
+          setProjects([]);
+          setCreators({});
         }
       } catch (error) {
         console.error("Error fetching projects:", error);
