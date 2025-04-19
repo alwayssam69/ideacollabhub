@@ -26,10 +26,13 @@ import {
   Zap,
   Shield,
   Network,
-  Target
+  Target,
+  Star,
+  Quote
 } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 // Container component for consistent max-width and padding
 function Container({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -55,16 +58,19 @@ function Background() {
 // Animated section component
 function AnimatedSection({ 
   children, 
-  delay = 0 
+  delay = 0,
+  className
 }: { 
   children: React.ReactNode;
   delay?: number;
+  className?: string;
 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: delay / 1000, duration: 0.5 }}
+      className={className}
     >
       {children}
     </motion.div>
@@ -209,6 +215,39 @@ function AnimatedShape({
           : "opacity-0 scale-0"
       }`}
     ></div>
+  );
+}
+
+// Testimonial card component
+function TestimonialCard({ 
+  quote, 
+  author, 
+  role,
+  delay = 0 
+}: { 
+  quote: string;
+  author: string;
+  role: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: delay / 1000, duration: 0.5 }}
+      className="flex flex-col h-full p-6 rounded-xl bg-gradient-to-b from-card/50 to-card/30 border border-border/50 shadow-sm hover:shadow-md hover:shadow-primary/5 transition-shadow"
+    >
+      <div className="mb-4">
+        <Quote className="h-6 w-6 text-primary/40" />
+      </div>
+      <p className="flex-grow text-sm leading-relaxed text-muted-foreground mb-6">
+        {quote}
+      </p>
+      <div className="flex flex-col gap-1">
+        <div className="text-sm font-semibold">{author}</div>
+        <div className="text-xs text-muted-foreground">{role}</div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -413,6 +452,55 @@ export default function Index() {
               ))}
             </div>
           </AnimatedSection>
+        </Container>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-muted/10 to-transparent" />
+        <Container className="relative">
+          <AnimatedSection>
+            <div className="text-center mb-10">
+              <h2 className="text-2xl font-bold mb-3">
+                What Our Users Say
+              </h2>
+              <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
+                Join thousands of founders and developers who have found their perfect team
+              </p>
+            </div>
+          </AnimatedSection>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <TestimonialCard
+              quote="IdeaCollabHub helped me find the perfect technical co-founder for my startup. The matching algorithm is spot-on!"
+              author="Sarah Chen"
+              role="Founder, TechFlow"
+              delay={100}
+            />
+            <TestimonialCard
+              quote="As a developer, I love how easy it is to discover interesting projects and connect with passionate founders."
+              author="Michael Rodriguez"
+              role="Full-stack Developer"
+              delay={200}
+            />
+            <TestimonialCard
+              quote="The platform's verification system gives me confidence that I'm connecting with serious professionals."
+              author="Emma Thompson"
+              role="UX Designer"
+              delay={300}
+            />
+          </div>
+
+          <div className="mt-10 text-center">
+            <div className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+              <Star className="h-4 w-4 text-primary fill-primary" />
+              <Star className="h-4 w-4 text-primary fill-primary" />
+              <Star className="h-4 w-4 text-primary fill-primary" />
+              <Star className="h-4 w-4 text-primary fill-primary" />
+              <Star className="h-4 w-4 text-primary fill-primary" />
+              <span className="ml-2">4.9/5 from 500+ reviews</span>
+            </div>
+          </div>
         </Container>
       </section>
 
