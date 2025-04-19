@@ -29,6 +29,16 @@ import {
   Target
 } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+// Container component for consistent max-width and padding
+function Container({ className, children }: { className?: string; children: React.ReactNode }) {
+  return (
+    <div className={cn("mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8", className)}>
+      {children}
+    </div>
+  );
+}
 
 // Background component with animated stars
 function Background() {
@@ -54,14 +64,14 @@ function AnimatedSection({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: delay / 1000, duration: 0.6 }}
+      transition={{ delay: delay / 1000, duration: 0.5 }}
     >
       {children}
     </motion.div>
   );
 }
 
-// Feature card component
+// Feature card component with improved depth and alignment
 function FeatureCard({ 
   icon: Icon, 
   title, 
@@ -73,15 +83,15 @@ function FeatureCard({
 }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      className="flex gap-4 p-6 rounded-2xl bg-card/5 border border-border/50 hover:border-primary/20 transition-colors"
+      whileHover={{ scale: 1.01 }}
+      className="group relative flex gap-4 rounded-lg border border-border/50 bg-gradient-to-b from-card/50 to-card/30 p-5 shadow-sm transition-shadow hover:shadow-md hover:shadow-primary/5"
     >
-      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-        <Icon className="h-6 w-6 text-primary" />
+      <div className="relative h-10 w-10 shrink-0 rounded-lg bg-primary/10 p-2.5">
+        <Icon className="h-5 w-5 text-primary" />
       </div>
       <div>
-        <h3 className="text-xl font-semibold mb-2">{title}</h3>
-        <p className="text-muted-foreground">{description}</p>
+        <h3 className="text-base font-semibold leading-7">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
     </motion.div>
   );
@@ -207,133 +217,130 @@ export default function Index() {
   const headerOpacity = useTransform(scrollY, [0, 100], [1, 0.98]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Background />
+    <div className="relative min-h-screen bg-background">
+      {/* Gradient background */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background/80" />
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 blur-3xl">
+          <div className="h-[600px] w-[1200px] rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent opacity-20" />
+        </div>
+      </div>
       
-      {/* Abstract shapes for visual interest */}
-      <AnimatedShape 
-        className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 w-64 h-64 blur-3xl top-20 left-10" 
-        delay={200} 
-      />
-      <AnimatedShape 
-        className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 w-80 h-80 blur-3xl bottom-40 right-10" 
-        delay={400} 
-      />
-      <AnimatedShape 
-        className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 w-72 h-72 blur-3xl top-96 left-1/2" 
-        delay={600} 
-      />
-      
-      {/* Sticky navigation (enhanced with motion) */}
+      {/* Navigation */}
       <motion.header 
-        className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg"
+        className="fixed left-0 right-0 top-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-lg"
         style={{ opacity: headerOpacity }}
       >
-        <nav className="container flex items-center justify-between h-16">
-          <Link to="/" className="text-xl font-bold">
-            IdeaCollabHub
-          </Link>
-          <Button asChild variant="default" size="sm">
-            <Link to="/auth/signup">
-              Get Started
-              <ArrowRight className="ml-2 h-4 w-4" />
+        <Container>
+          <nav className="flex h-14 items-center justify-between">
+            <Link to="/" className="text-lg font-semibold">
+              IdeaCollabHub
             </Link>
-          </Button>
-        </nav>
+            <Button asChild variant="default" size="sm" className="h-8 px-3 text-sm">
+              <Link to="/auth/signup">
+                Get Started
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </nav>
+        </Container>
       </motion.header>
-      
-      {/* Hero Section (enhanced with modern design) */}
-      <section className="relative pt-24 pb-32">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background to-background/80" />
-        
-        <div className="container">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <AnimatedSection delay={100}>
-              <div className="space-y-8">
-                <h1 className="text-5xl lg:text-6xl font-bold tracking-tight">
-                  Where Ideas Meet{" "}
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-foreground">
-                    Collaboration
-                  </span>
-                </h1>
-                <p className="text-xl text-muted-foreground leading-relaxed">
-                  Connect with talented co-founders, developers, and creators. Build your next big project with the perfect team.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    asChild 
-                    size="lg"
-                    className="text-base"
-                  >
-                    <Link to="/auth/signup">
-                      Start Your Journey
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Link>
-                  </Button>
-                  <Button 
-                    asChild 
-                    size="lg" 
-                    variant="outline"
-                    className="text-base"
-                  >
-                    <Link to="/discover">
-                      Explore Projects
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </AnimatedSection>
-            
-            <AnimatedSection delay={300}>
-              <div className="relative aspect-square rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-8 border border-border/50">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="relative w-full h-full">
-                    {/* Central hub visualization */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                      <Network className="h-16 w-16 text-primary" />
-                    </div>
-                    
-                    {/* Connecting nodes */}
-                    {[
-                      { top: '10%', left: '20%', icon: Code },
-                      { top: '80%', left: '30%', icon: Users },
-                      { top: '20%', left: '80%', icon: Rocket },
-                      { top: '70%', left: '75%', icon: MessageCircle }
-                    ].map((node, index) => (
-                      <motion.div
-                        key={index}
-                        className="absolute w-20 h-20 rounded-full bg-card/70 border border-primary/20 flex items-center justify-center"
-                        style={{ top: node.top, left: node.left }}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: index * 0.2, type: "spring" }}
-                      >
-                        <node.icon className="h-8 w-8 text-primary/80" />
-                      </motion.div>
-                    ))}
+
+      {/* Hero Section */}
+      <section className="relative pt-24 pb-16">
+        <Container>
+          <div className="grid lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-7">
+              <AnimatedSection delay={100}>
+                <div className="space-y-6">
+                  <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">
+                    Where Ideas Meet{" "}
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-foreground">
+                      Collaboration
+                    </span>
+                  </h1>
+                  <p className="text-lg text-muted-foreground">
+                    Connect with talented co-founders, developers, and creators. Build your next big project with the perfect team.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button 
+                      asChild 
+                      size="default"
+                      className="h-10 px-4 text-sm"
+                    >
+                      <Link to="/auth/signup">
+                        Start Your Journey
+                        <ArrowRight className="ml-1.5 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button 
+                      asChild 
+                      size="default" 
+                      variant="outline"
+                      className="h-10 px-4 text-sm"
+                    >
+                      <Link to="/discover">
+                        Explore Projects
+                      </Link>
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </AnimatedSection>
+              </AnimatedSection>
+            </div>
+
+            <div className="lg:col-span-5">
+              <AnimatedSection delay={300}>
+                <div className="relative aspect-square rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 p-6 border border-border/50 shadow-lg shadow-primary/5">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative w-full h-full">
+                      {/* Central hub */}
+                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
+                        <Network className="h-12 w-12 text-primary" />
+                      </div>
+                      
+                      {/* Connecting nodes */}
+                      {[
+                        { top: '10%', left: '20%', icon: Code },
+                        { top: '80%', left: '30%', icon: Users },
+                        { top: '20%', left: '80%', icon: Rocket },
+                        { top: '70%', left: '75%', icon: MessageCircle }
+                      ].map((node, index) => (
+                        <motion.div
+                          key={index}
+                          className="absolute w-16 h-16 rounded-full bg-card/70 border border-primary/20 flex items-center justify-center"
+                          style={{ top: node.top, left: node.left }}
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: index * 0.2, type: "spring" }}
+                        >
+                          <node.icon className="h-6 w-6 text-primary/80" />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </AnimatedSection>
+            </div>
           </div>
-        </div>
+        </Container>
       </section>
-      
+
       {/* Features Section */}
-      <section className="py-24 bg-muted/10">
-        <div className="container">
+      <section className="py-16 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-transparent" />
+        <Container className="relative">
           <AnimatedSection>
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold mb-4">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl font-bold mb-3">
                 Why Choose IdeaCollabHub
               </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
                 Our platform provides everything you need to find the perfect team and bring your ideas to life.
               </p>
             </div>
           </AnimatedSection>
-          
-          <div className="grid md:grid-cols-2 gap-6">
+
+          <div className="grid md:grid-cols-2 gap-4">
             <FeatureCard
               icon={Target}
               title="Smart Matching"
@@ -355,23 +362,24 @@ export default function Index() {
               description="Share your projects and find opportunities to collaborate with other builders."
             />
           </div>
-        </div>
+        </Container>
       </section>
-      
+
       {/* How It Works */}
-      <section className="py-24">
-        <div className="container">
+      <section className="py-16 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-muted/20 to-transparent" />
+        <Container className="relative">
           <AnimatedSection>
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold mb-4">
+            <div className="text-center mb-10">
+              <h2 className="text-2xl font-bold mb-3">
                 How It Works
               </h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
                 Get started in three simple steps
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-6">
               {[
                 {
                   icon: Users,
@@ -391,49 +399,52 @@ export default function Index() {
               ].map((step, index) => (
                 <motion.div
                   key={index}
-                  className="p-6 rounded-2xl bg-card/5 border border-border/50"
+                  className="relative p-5 rounded-lg border border-border/50 bg-gradient-to-b from-card/50 to-card/30 shadow-sm"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.2 }}
                 >
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <step.icon className="h-6 w-6 text-primary" />
+                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                    <step.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
+                  <h3 className="text-base font-semibold mb-2">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground">{step.description}</p>
                 </motion.div>
               ))}
             </div>
           </AnimatedSection>
-        </div>
+        </Container>
       </section>
-      
+
       {/* CTA Section */}
-      <section className="py-24">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
+      <section className="py-16">
+        <Container>
+          <div className="mx-auto max-w-2xl text-center">
             <AnimatedSection>
-              <div className="rounded-2xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 p-12 border border-primary/10">
-                <h2 className="text-4xl font-bold mb-6">
-                  Ready to Find Your Perfect Team?
-                </h2>
-                <p className="text-xl text-muted-foreground mb-8">
-                  Join our community of builders, creators, and innovators today.
-                </p>
-                <Button 
-                  asChild 
-                  size="lg"
-                  className="text-lg"
-                >
-                  <Link to="/auth/signup">
-                    Get Started Now
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </Button>
+              <div className="relative rounded-xl bg-gradient-to-b from-primary/5 to-transparent p-8 shadow-lg shadow-primary/5 border border-primary/10">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 opacity-20 blur-2xl" />
+                <div className="relative">
+                  <h2 className="text-2xl font-bold mb-4">
+                    Ready to Find Your Perfect Team?
+                  </h2>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Join our community of builders, creators, and innovators today.
+                  </p>
+                  <Button 
+                    asChild 
+                    size="default"
+                    className="h-10 px-4 text-sm"
+                  >
+                    <Link to="/auth/signup">
+                      Get Started Now
+                      <ArrowRight className="ml-1.5 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </AnimatedSection>
           </div>
-        </div>
+        </Container>
       </section>
     </div>
   );
