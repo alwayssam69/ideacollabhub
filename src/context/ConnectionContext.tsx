@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -82,48 +81,54 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     try {
       setLoading(true);
       
-      // First fetch the requester data
-      const { data: requesterData, error: requesterError } = await supabase
+      // Fetch connections where user is either requester or recipient
+      const { data: connectionsData, error: connectionsError } = await supabase
         .from('connections')
         .select(`
-          *,
+          id,
+          requester_id,
+          recipient_id,
+          status,
+          created_at,
+          updated_at,
           requester:profiles!requester_id(id, full_name, avatar_url),
           recipient:profiles!recipient_id(id, full_name, avatar_url)
         `)
         .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
 
-      if (requesterError) throw requesterError;
-      
-      if (!requesterData) {
+      if (connectionsError) {
+        console.error('Error fetching connections:', connectionsError);
+        throw connectionsError;
+      }
+
+      if (!connectionsData) {
         setConnections([]);
         setPendingRequests([]);
-        setLoading(false);
         return;
       }
 
-      // Process the data and ensure it matches the Connection interface with proper type assertion
-      const formattedConnections: Connection[] = requesterData.map(conn => {
-        return {
-          ...conn,
-          status: conn.status as 'pending' | 'accepted' | 'rejected',
-          requester: conn.requester as unknown as ConnectionProfile,
-          recipient: conn.recipient as unknown as ConnectionProfile
-        };
-      });
+      // Process the data
+      const formattedConnections = connectionsData.map(conn => ({
+        ...conn,
+        status: conn.status as 'pending' | 'accepted' | 'rejected',
+        requester: conn.requester as ConnectionProfile,
+        recipient: conn.recipient as ConnectionProfile
+      }));
 
+      // Filter connections based on status
       const acceptedConnections = formattedConnections.filter(
-        (conn) => conn.status === 'accepted'
+        conn => conn.status === 'accepted'
       );
       
       const pending = formattedConnections.filter(
-        (conn) => conn.status === 'pending' && conn.recipient_id === user.id
+        conn => conn.status === 'pending' && conn.recipient_id === user.id
       );
 
       setConnections(acceptedConnections);
       setPendingRequests(pending);
     } catch (error) {
-      console.error('Error fetching connections:', error);
-      toast.error('Failed to load connections');
+      console.error('Error in fetchConnections:', error);
+      toast.error('Failed to load connections. Please try again later.');
     } finally {
       setLoading(false);
     }

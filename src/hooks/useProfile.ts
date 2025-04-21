@@ -48,22 +48,40 @@ export const useProfile = () => {
 
     try {
       setLoading(true);
+      
+      // Validate required fields
+      if (updates.full_name && updates.full_name.length < 2) {
+        throw new Error('Full name must be at least 2 characters long');
+      }
+
+      if (updates.bio && updates.bio.length > 500) {
+        throw new Error('Bio must not exceed 500 characters');
+      }
+
+      // Prepare the update data
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update the profile
       const { error } = await supabase
         .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(error.message);
+      }
 
       // Refresh profile data
       await fetchProfile();
       toast.success('Profile updated successfully');
     } catch (err) {
       console.error('Error updating profile:', err);
-      toast.error('Failed to update profile');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+      toast.error(errorMessage);
       throw err;
     } finally {
       setLoading(false);

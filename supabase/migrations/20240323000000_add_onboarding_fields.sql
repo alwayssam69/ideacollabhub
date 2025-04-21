@@ -43,8 +43,20 @@ CREATE INDEX idx_profiles_looking_for ON profiles USING GIN(looking_for);
 CREATE INDEX idx_profiles_location ON profiles(location);
 CREATE INDEX idx_profiles_onboarding ON profiles(onboarding_completed);
 
--- Add RLS policies for onboarding fields
-CREATE POLICY "Users can update their own onboarding data"
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can update their own onboarding data" ON profiles;
+DROP POLICY IF EXISTS "Allow users to update their own profile" ON profiles;
+
+-- Add RLS policies for profiles
+CREATE POLICY "Enable read access for all users"
+    ON profiles FOR SELECT
+    USING (true);
+
+CREATE POLICY "Enable insert for authenticated users"
+    ON profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Enable update for users based on id"
     ON profiles FOR UPDATE
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
