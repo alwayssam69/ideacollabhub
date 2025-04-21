@@ -47,6 +47,7 @@ export const useProjects = (
 
         if (error) throw error;
 
+        // Use type assertion to avoid recursive type issues
         const projectsData = data || [];
         setProjects(projectsData as Project[]);
 
@@ -62,6 +63,7 @@ export const useProjects = (
 
           const profilesMap: Record<string, Profile> = {};
           if (profilesData) {
+            // Use type assertion to avoid recursive type issues
             profilesData.forEach((profile) => {
               profilesMap[profile.id] = profile as Profile;
             });

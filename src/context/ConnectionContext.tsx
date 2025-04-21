@@ -101,10 +101,11 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         return;
       }
 
-      // Process the data and ensure it matches the Connection interface
+      // Process the data and ensure it matches the Connection interface with proper type assertion
       const formattedConnections: Connection[] = requesterData.map(conn => {
         return {
           ...conn,
+          status: conn.status as 'pending' | 'accepted' | 'rejected',
           requester: conn.requester as unknown as ConnectionProfile,
           recipient: conn.recipient as unknown as ConnectionProfile
         };
