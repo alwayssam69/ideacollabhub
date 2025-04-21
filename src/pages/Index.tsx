@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
@@ -27,16 +26,71 @@ import {
   Zap
 } from "lucide-react";
 
-// Background component with animated stars
+// Background component with animated stars and fallback
 function Background() {
+  const [hasWebGLError, setHasWebGLError] = useState(false);
+  
+  // Error handler for WebGL context creation failure
+  const handleWebGLError = (event: ErrorEvent) => {
+    if (event.message.includes("WebGL") || event.message.includes("THREE")) {
+      setHasWebGLError(true);
+      console.warn("WebGL rendering failed, using static background fallback");
+    }
+  };
+  
+  useEffect(() => {
+    // Add error event listener
+    window.addEventListener('error', handleWebGLError);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('error', handleWebGLError);
+    };
+  }, []);
+  
+  if (hasWebGLError) {
+    // Fallback gradient background when WebGL fails
+    return (
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900" />
+    );
+  }
+  
   return (
     <div className="absolute inset-0 -z-10">
-      <Canvas camera={{ position: [0, 0, 1] }}>
-        <Stars />
-        <ambientLight intensity={0.5} />
-      </Canvas>
+      {/* Only try to render Canvas if we haven't detected WebGL errors */}
+      <ErrorBoundary fallback={<div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900" />}>
+        <Canvas camera={{ position: [0, 0, 1] }} onCreated={({ gl }) => {
+          gl.setClearColor('#0a0a0a');
+        }}>
+          <Stars />
+          <ambientLight intensity={0.5} />
+        </Canvas>
+      </ErrorBoundary>
     </div>
   );
+}
+
+// Simple error boundary component
+class ErrorBoundary extends React.Component<{
+  children: React.ReactNode,
+  fallback: React.ReactNode
+}> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.warn('WebGL Error caught by ErrorBoundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
 }
 
 // Animated section component
