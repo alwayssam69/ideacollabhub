@@ -8,10 +8,10 @@ import {
   CardContent,
   HoverCard,
   HoverCardContent,
-  HoverCardTrigger,
-  Input,
-  Label
+  HoverCardTrigger
 } from "@/components/ui";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   ArrowRight, 
   Briefcase, 
@@ -299,6 +299,39 @@ function VideoBackground({ src }: { src: string }) {
     </div>
   );
 }
+
+const features = [
+  {
+    icon: Target,
+    title: "Smart Matching",
+    description: "Our algorithm connects you with collaborators who complement your skills and share your vision."
+  },
+  {
+    icon: MessageCircle,
+    title: "Real-Time Chat",
+    description: "Communicate seamlessly with potential teammates through our built-in messaging system."
+  },
+  {
+    icon: Shield,
+    title: "Verified Profiles",
+    description: "Connect with confidence knowing all users are verified professionals and students."
+  },
+  {
+    icon: Share2,
+    title: "Project Showcase",
+    description: "Share your projects and find opportunities to collaborate with other builders."
+  },
+  {
+    icon: Network,
+    title: "Global Network",
+    description: "Connect with talented individuals from around the world to build your next big idea."
+  },
+  {
+    icon: Rocket,
+    title: "Fast Growth",
+    description: "Accelerate your project's development with our powerful collaboration tools."
+  }
+];
 
 export default function Index() {
   const { scrollY } = useScroll();
