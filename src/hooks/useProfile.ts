@@ -64,15 +64,34 @@ export const useProfile = () => {
         updated_at: new Date().toISOString(),
       };
 
-      // Update the profile
-      const { error } = await supabase
+      // First, check if profile exists
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .update(updateData)
-        .eq('id', user.id);
+        .select('id')
+        .eq('id', user.id)
+        .single();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw new Error(error.message);
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        throw checkError;
+      }
+
+      let result;
+      if (!existingProfile) {
+        // Create new profile
+        result = await supabase
+          .from('profiles')
+          .insert([{ ...updateData, id: user.id }]);
+      } else {
+        // Update existing profile
+        result = await supabase
+          .from('profiles')
+          .update(updateData)
+          .eq('id', user.id);
+      }
+
+      if (result.error) {
+        console.error('Supabase error:', result.error);
+        throw new Error(result.error.message);
       }
 
       // Refresh profile data
