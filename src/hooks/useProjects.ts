@@ -1,11 +1,30 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tables } from "@/integrations/supabase/types";
 
-export type Project = Tables<'projects'>;
-export type Profile = Tables<'profiles'>;
+// Define explicit interfaces instead of using Tables directly
+export interface Project {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  duration: string;
+  industry: string;
+  location: string;
+  required_skills: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profile {
+  id: string;
+  username: string;
+  full_name: string;
+  avatar_url: string | null;
+  email: string;
+  created_at: string;
+}
 
 interface UseProjectsResult {
   projects: Project[];

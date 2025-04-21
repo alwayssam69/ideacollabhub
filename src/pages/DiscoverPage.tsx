@@ -42,10 +42,22 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showFullProfile, setShowFullProfile] = useState(false);
   const { sendConnectionRequest, checkConnectionStatus } = useConnectionRequests();
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+
+  useEffect(() => {
+    if (user) {
+      setConnectionStatus(checkConnectionStatus(profile.id));
+    }
+  }, [user, profile.id, checkConnectionStatus]);
 
   const handleConnectionRequest = async () => {
     if (!user) {
       toast.error("Please sign in to send connection requests");
+      return;
+    }
+
+    if (connectionStatus !== 'none') {
+      toast.error("A connection request already exists");
       return;
     }
 
@@ -55,6 +67,7 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
       if (result.error) {
         toast.error(result.error);
       } else {
+        setConnectionStatus('pending');
         toast.success("Connection request sent!");
       }
     } catch (error) {
@@ -135,10 +148,14 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
         </Button>
         <Button
           onClick={handleConnectionRequest}
-          disabled={isLoading}
+          disabled={isLoading || connectionStatus !== 'none'}
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
+          ) : connectionStatus === 'pending' ? (
+            "Request Sent"
+          ) : connectionStatus === 'accepted' ? (
+            "Connected"
           ) : (
             "Connect"
           )}
