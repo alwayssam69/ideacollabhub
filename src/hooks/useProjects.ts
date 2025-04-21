@@ -4,26 +4,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { Tables } from '@/integrations/supabase/types';
 
+// Explicitly define the Project type with all fields that might be used
 export type Project = {
   id: string;
-  name: string;
+  title: string;
   description: string;
   created_at: string;
   updated_at: string;
-  owner_id: string;
-  status: 'active' | 'completed' | 'archived';
-  tags: string[];
+  user_id: string;
+  duration?: string | null;
+  looking_for: string;
+  required_skills?: string[] | null;
   repository_url?: string;
   website_url?: string;
   thumbnail_url?: string;
-  // Add properties from the database schema
-  title?: string;
-  user_id?: string;
-  duration?: string;
-  looking_for?: string;
-  required_skills?: string[];
+  status?: 'active' | 'completed' | 'archived';
+  tags?: string[];
+  owner_id?: string;
+  name?: string;
 };
 
+// Define the Profile type
 export type Profile = {
   id: string;
   full_name: string | null;
@@ -71,14 +72,20 @@ export function useProjects(
       const creatorsMap: Record<string, Profile> = {};
       if (profiles) {
         profiles.forEach(profile => {
-          creatorsMap[profile.id] = profile as unknown as Profile;
+          creatorsMap[profile.id] = {
+            id: profile.id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            title: profile.title,
+            location: profile.location
+          };
         });
         setCreators(creatorsMap);
       }
     }
 
-    // Use type assertion to fix infinite type instantiation
-    return data as unknown as Project[];
+    // Cast the data to Project[] to avoid type issues
+    return data as Project[];
   };
 
   const { data: projects = [], isLoading, error } = useQuery({
@@ -92,6 +99,7 @@ export function useProjects(
     error,
     setFilter,
     filter,
-    creators
+    creators,
+    loading: isLoading, // Add loading alias for backward compatibility
   };
 }

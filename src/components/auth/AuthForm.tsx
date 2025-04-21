@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +8,8 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
-type AuthMode = 'signup' | 'login';
-
 export function AuthForm() {
-  const [mode, setMode] = useState<AuthMode>('login');
+  const { mode = "signin" } = useParams<{ mode: "signin" | "signup" }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -119,7 +118,7 @@ export function AuthForm() {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+            onClick={() => navigate(mode === 'login' ? '/auth/signup' : '/auth/signin')}
             className="text-sm font-medium text-primary hover:underline"
           >
             {mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
@@ -141,4 +140,4 @@ export function AuthForm() {
       </form>
     </div>
   );
-} 
+}

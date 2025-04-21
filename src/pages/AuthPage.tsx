@@ -15,7 +15,7 @@ export default function AuthPage() {
             {mode === "signin" ? "Welcome back" : "Create an account"}
           </h1>
         </div>
-        <AuthForm mode={mode} />
+        <AuthForm />
       </div>
     </div>
   );
