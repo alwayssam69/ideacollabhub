@@ -28,8 +28,8 @@ export const useProjects = (
       try {
         setLoading(true);
 
-        // Use explicit typing to avoid deep instantiation errors
-        let query = supabase.from("projects").select("*");
+        // Use explicit type annotation to avoid deep instantiation issues
+        let query = supabase.from("projects").select();
 
         if (selectedCategory) {
           query = query.eq("duration", selectedCategory);
@@ -48,8 +48,8 @@ export const useProjects = (
 
         if (error) throw error;
 
-        // Use explicit casting to Project[] to avoid deep instantiation
-        const projectsData = rawProjects as unknown as Project[] || [];
+        // Explicit cast to avoid type issues
+        const projectsData = rawProjects as Project[] || [];
         setProjects(projectsData);
 
         const userIds = [...new Set(projectsData.map((p) => p.user_id))];
@@ -57,14 +57,15 @@ export const useProjects = (
         if (userIds.length > 0) {
           const { data: rawProfiles, error: profileError } = await supabase
             .from("profiles")
-            .select("*")
+            .select()
             .in("id", userIds);
 
           if (profileError) throw profileError;
 
-          // Use explicit casting to Profile[] to avoid deep instantiation
-          const profilesData = rawProfiles as unknown as Profile[] || [];
+          // Explicit cast to avoid type issues
+          const profilesData = rawProfiles as Profile[] || [];
           
+          // Create a map of user IDs to profiles
           const profilesMap: Record<string, Profile> = {};
           profilesData.forEach((profile) => {
             profilesMap[profile.id] = profile;
@@ -72,11 +73,10 @@ export const useProjects = (
 
           setCreators(profilesMap);
         }
-
-        setLoading(false);
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error fetching projects:", error);
         toast.error("Failed to load projects");
+      } finally {
         setLoading(false);
       }
     };
