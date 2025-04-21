@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,7 +11,8 @@ import { MessageProvider } from '@/context/MessageContext';
 import PrivateRoute from '@/components/PrivateRoute';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
-import Onboarding from '@/pages/Onboarding';
+// Import OnboardingPage as a default import
+import OnboardingPage from '@/pages/OnboardingPage';
 
 import MainLayout from "./components/layout/MainLayout";
 import Index from "./pages/Index";
@@ -21,7 +23,6 @@ import ConnectionsPage from "./pages/ConnectionsPage";
 import MessagesPage from "./pages/MessagesPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
-import OnboardingPage from "./pages/OnboardingPage";
 import DashboardPage from "./pages/DashboardPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import PendingRequestsPage from "./pages/PendingRequestsPage";

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -48,7 +49,8 @@ const profileSchema = z.object({
   website_url: z.string().url('Invalid Website URL').optional().or(z.literal('')),
 });
 
-export function OnboardingPage() {
+// Change from 'export function OnboardingPage()' to 'export default function OnboardingPage()'
+export default function OnboardingPage() {
   const { user } = useAuth();
   const [step, setStep] = useState<OnboardingStep>('personal');
   const [loading, setLoading] = useState(false);
@@ -552,4 +554,4 @@ export function OnboardingPage() {
       </div>
     </div>
   );
-} 
+}
