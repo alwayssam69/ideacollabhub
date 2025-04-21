@@ -39,7 +39,7 @@ type Project = Tables<"projects">;
 type Profile = Tables<"profiles">;
 
 interface ProjectWithCreator extends Project {
-  creator: Profile | { [key: string]: any }; // Allow fallback for error handling
+  creator: Profile;
 }
 
 export default function ProjectsPage() {
@@ -77,19 +77,7 @@ export default function ProjectsPage() {
 
       if (projectsError) throw projectsError;
 
-      // Handle possible error cases with profile relationships
-      const safeProjects = (projectsData || []).map(project => {
-        return {
-          ...project,
-          creator: project.creator || {
-            id: project.user_id,
-            full_name: 'Unknown',
-            avatar_url: '/default-avatar.png'
-          }
-        };
-      }) as ProjectWithCreator[];
-
-      setProjects(safeProjects);
+      setProjects(projectsData as ProjectWithCreator[]);
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to load projects");

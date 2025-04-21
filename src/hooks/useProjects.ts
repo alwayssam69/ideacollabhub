@@ -28,7 +28,8 @@ export const useProjects = (
       try {
         setLoading(true);
 
-        let query = supabase.from("projects").select();
+        // Use explicit typing to avoid deep instantiation errors
+        let query = supabase.from("projects").select("*");
 
         if (selectedCategory) {
           query = query.eq("duration", selectedCategory);
@@ -47,8 +48,8 @@ export const useProjects = (
 
         if (error) throw error;
 
-        // Explicitly type the projects to avoid deep instantiation
-        const projectsData = rawProjects ? rawProjects as Project[] : [];
+        // Use explicit casting to Project[] to avoid deep instantiation
+        const projectsData = rawProjects as unknown as Project[] || [];
         setProjects(projectsData);
 
         const userIds = [...new Set(projectsData.map((p) => p.user_id))];
@@ -56,27 +57,26 @@ export const useProjects = (
         if (userIds.length > 0) {
           const { data: rawProfiles, error: profileError } = await supabase
             .from("profiles")
-            .select()
+            .select("*")
             .in("id", userIds);
 
           if (profileError) throw profileError;
 
-          // Create a map of user IDs to profiles with explicit typing
-          const profilesMap: Record<string, Profile> = {};
-          const profilesArray = rawProfiles ? rawProfiles as Profile[] : [];
+          // Use explicit casting to Profile[] to avoid deep instantiation
+          const profilesData = rawProfiles as unknown as Profile[] || [];
           
-          profilesArray.forEach((profile) => {
-            if (profile && profile.id) {
-              profilesMap[profile.id] = profile;
-            }
+          const profilesMap: Record<string, Profile> = {};
+          profilesData.forEach((profile) => {
+            profilesMap[profile.id] = profile;
           });
 
           setCreators(profilesMap);
         }
-      } catch (error) {
+
+        setLoading(false);
+      } catch (error: any) {
         console.error("Error fetching projects:", error);
         toast.error("Failed to load projects");
-      } finally {
         setLoading(false);
       }
     };

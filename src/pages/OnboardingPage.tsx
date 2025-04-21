@@ -1,663 +1,478 @@
-// Replace import from next/router with react-router-dom
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
+import { useNavigate } from "react-router-dom";
+import { Loader2, Upload } from "lucide-react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
-import { ProfileWithWebsite } from "@/types/onboarding";
 
-type Profile = Tables<'profiles'>;
-
-const industries = [
+// Constants for dropdown options
+const INDUSTRY_OPTIONS = [
   "Technology",
-  "Healthcare", 
-  "Finance",
   "Education",
-  "Retail",
-  "Manufacturing",
-  "Energy",
-  "Agriculture",
-  "Arts and Entertainment",
-  "Government",
-  "Non-profit",
-  "Other",
-];
-
-const projectTypes = [
-  "Mobile App",
-  "Web Application",
-  "AI/ML Project",
-  "Hardware",
-  "Social Impact",
-  "Research",
-  "Art Installation",
-  "Open Source",
-  "Other",
-];
-
-const skillsList = [
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Vue.js",
-  "Angular",
-  "Node.js",
-  "Python",
-  "Java",
-  "C++",
-  "C#",
-  "Swift",
-  "Kotlin",
-  "HTML",
-  "CSS",
-  "SQL",
-  "NoSQL",
-  "GraphQL",
-  "REST API",
-  "Docker",
-  "Kubernetes",
-  "AWS",
-  "Azure",
-  "GCP",
-  "UI Design",
-  "UX Design",
-  "Graphic Design",
-  "Product Management",
-  "Marketing",
-  "Sales",
+  "Healthcare",
   "Finance",
-  "Legal",
-  "Project Management",
-  "Data Analysis",
-  "Machine Learning",
-  "Artificial Intelligence",
-  "Cybersecurity",
-  "Blockchain",
-  "Cloud Computing",
-  "DevOps",
-  "Mobile Development",
-  "Web Development",
-  "Game Development",
-  "Embedded Systems",
-  "Robotics",
-  "Virtual Reality",
-  "Augmented Reality",
-  "Internet of Things",
-  "Data Science",
-  "Bioinformatics",
-  "Nanotechnology",
-  "Renewable Energy",
-  "Aerospace Engineering",
-  "Civil Engineering",
-  "Mechanical Engineering",
-  "Electrical Engineering",
-  "Chemical Engineering",
-  "Biomedical Engineering",
-  "Environmental Engineering",
-  "Nuclear Engineering",
-  "Software Engineering",
-  "Hardware Engineering",
-  "Systems Engineering",
-  "Network Engineering",
-  "Database Administration",
-  "Security Engineering",
-  "Reliability Engineering",
-  "Performance Engineering",
-  "Test Engineering",
-  "Quality Assurance",
-  "Technical Writing",
-  "Technical Support",
-  "Technical Sales",
-  "Technical Marketing",
-  "Technical Training",
-  "Technical Consulting",
-  "Technical Management",
-  "Technical Leadership",
-  "Technical Strategy",
-  "Technical Innovation",
-  "Technical Research",
-  "Technical Development",
-  "Technical Implementation",
-  "Technical Integration",
-  "Technical Maintenance",
-  "Technical Operations",
-  "Technical Support",
-  "Technical Sales",
-  "Technical Marketing",
-  "Technical Training",
-  "Technical Consulting",
-  "Technical Management",
-  "Technical Leadership",
-  "Technical Strategy",
-  "Technical Innovation",
-  "Technical Research",
-  "Technical Development",
-  "Technical Implementation",
-  "Technical Integration",
-  "Technical Maintenance",
-  "Technical Operations",
+  "Marketing",
+  "Design",
+  "Media",
+  "Entertainment",
+  "Manufacturing",
+  "Retail",
+  "Other"
 ];
+
+const SKILLS_BY_INDUSTRY = {
+  "Technology": [
+    "Web Development",
+    "Mobile Development",
+    "Data Science",
+    "Machine Learning",
+    "UI/UX Design",
+    "Cloud Computing",
+    "DevOps",
+    "Blockchain",
+    "Cybersecurity"
+  ],
+  "Education": [
+    "Teaching",
+    "Curriculum Development",
+    "Educational Technology",
+    "School Administration",
+    "Educational Psychology",
+    "Special Education",
+    "E-learning Development"
+  ],
+  // Add other industries as needed
+};
+
+const PURPOSE_OPTIONS = [
+  "Join Projects",
+  "Find Mentor",
+  "Startup Team",
+  "General Networking",
+  "Learning Opportunities",
+  "Freelance Work"
+];
+
+const AVAILABILITY_OPTIONS = [
+  "Weekdays",
+  "Weekends",
+  "Evenings",
+  "Flexible",
+  "Limited Availability"
+];
+
+const MEETING_PREFERENCE_OPTIONS = [
+  "Virtual",
+  "In-Person",
+  "Either"
+];
+
+// Step schemas
+const professionalInfoSchema = z.object({
+  industry: z.string().min(1, "Industry is required"),
+  skills: z.array(z.string()).min(1, "Please select at least one skill"),
+  purposes: z.array(z.string()).min(1, "Please select at least one purpose"),
+  availability: z.string().min(1, "Availability is required"),
+  meetingPreference: z.string().min(1, "Meeting preference is required"),
+  bio: z.string().min(10, "Bio should be at least 10 characters"),
+  profilePhoto: z.instanceof(File).optional(),
+});
 
 export default function OnboardingPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const [profile, setProfile] = useState<ProfileWithWebsite>({
-    id: user?.id || "",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    username: "",
-    full_name: "",
-    title: "",
-    bio: "",
-    location: "",
-    website: "",
-    avatar_url: "",
-    skills: [],
-    looking_for: [],
-    preferred_industries: [],
-    preferred_project_types: [],
-    experience: "",
-    industry: "",
-    linkedin_url: "",
-    portfolio_url: "",
-    meeting_preference: "",
-    availability: "",
-    motivation: "",
-    stage: "",
-    project_description: "",
-    project_stage: "",
-    onboarding_completed: false,
+  const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIndustry, setSelectedIndustry] = useState("");
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [previewUrl, setPreviewUrl] = useState<string>("");
+
+  const form = useForm<z.infer<typeof professionalInfoSchema>>({
+    resolver: zodResolver(professionalInfoSchema),
+    defaultValues: {
+      industry: "",
+      skills: [],
+      purposes: [],
+      availability: "",
+      meetingPreference: "",
+      bio: "",
+      profilePhoto: undefined,
+    },
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [skills, setSkills] = useState(skillsList);
-  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [photoURL, setPhotoURL] = useState<string | undefined>(profile.avatar_url);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setProfile((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSkillsChange = (skill: string) => {
-    if (selectedSkills.includes(skill)) {
-      setSelectedSkills(selectedSkills.filter((s) => s !== skill));
-      setProfile((prev) => ({
-        ...prev,
-        skills: prev.skills?.filter((s) => s !== skill) || [],
-      }));
-    } else {
-      setSelectedSkills([...selectedSkills, skill]);
-      setProfile((prev) => ({ ...prev, skills: [...(prev.skills || []), skill] }));
-    }
-  };
-
-  const handlePreferredIndustriesChange = (industry: string) => {
-    if (profile.preferred_industries?.includes(industry)) {
-      setProfile((prev) => ({
-        ...prev,
-        preferred_industries: prev.preferred_industries.filter((i) => i !== industry),
-      }));
-    } else {
-      setProfile((prev) => ({
-        ...prev,
-        preferred_industries: [...(prev.preferred_industries || []), industry],
-      }));
-    }
-  };
-
-  const handlePreferredProjectTypesChange = (projectType: string) => {
-    if (profile.preferred_project_types?.includes(projectType)) {
-      setProfile((prev) => ({
-        ...prev,
-        preferred_project_types: prev.preferred_project_types.filter((p) => p !== projectType),
-      }));
-    } else {
-      setProfile((prev) => ({
-        ...prev,
-        preferred_project_types: [...(prev.preferred_project_types || []), projectType],
-      }));
-    }
-  };
-
-  const handleLookingForChange = (lookingFor: string) => {
-    if (profile.looking_for?.includes(lookingFor)) {
-      setProfile((prev) => ({
-        ...prev,
-        looking_for: prev.looking_for.filter((l) => l !== lookingFor),
-      }));
-    } else {
-      setProfile((prev) => ({
-        ...prev,
-        looking_for: [...(prev.looking_for || []), lookingFor],
-      }));
-    }
-  };
-
-  const handleAvailabilityChange = (value: string) => {
-    setProfile((prev) => ({ ...prev, availability: value }));
-  };
-
-  const handleMeetingPreferenceChange = (value: string) => {
-    setProfile((prev) => ({ ...prev, meeting_preference: value }));
-  };
-
-  const handleExperienceChange = (value: string) => {
-    setProfile((prev) => ({ ...prev, experience: value }));
-  };
 
   const handleIndustryChange = (value: string) => {
-    setProfile((prev) => ({ ...prev, industry: value }));
-  };
-
-  const handleStageChange = (value: string) => {
-    setProfile((prev) => ({ ...prev, stage: value }));
-  };
-
-  const handleProjectStageChange = (value: string) => {
-    setProfile((prev) => ({ ...prev, project_stage: value }));
-  };
-
-  const handleSaveProfile = async () => {
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({
-          ...profile,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user?.id);
-
-      if (error) throw error;
-
-      toast.success("Profile updated successfully!");
-      navigate("/discover");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast.error("Failed to update profile");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleFileUpload = async (file: File) => {
-    const fileExt = file.name.split('.').pop();
-    const filePath = `profile-photos/${user?.id}-${Math.random()}.${fileExt}`;
+    setSelectedIndustry(value);
+    form.setValue("industry", value);
+    form.setValue("skills", []);
     
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('profile-photos')
-        .upload(filePath, file);
-        
-      if (uploadError) throw uploadError;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(filePath);
-        
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user?.id);
-        
-      if (updateError) throw updateError;
-      
-      setPhotoURL(publicUrl);
-      setProfile((prev) => ({ ...prev, avatar_url: publicUrl }));
-      toast.success("Profile photo updated successfully!");
-    } catch (error) {
-      console.error("Error uploading photo:", error);
-      toast.error("Failed to update profile photo");
+    // Update available skills based on selected industry
+    setAvailableSkills(SKILLS_BY_INDUSTRY[value as keyof typeof SKILLS_BY_INDUSTRY] || []);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      form.setValue("profilePhoto", file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
     }
   };
 
-  const handlePhotoUpdate = (newUrl: string) => {
-    setPhotoURL(newUrl);
-    setProfile((prev) => ({ ...prev, avatar_url: newUrl }));
+  const uploadProfilePhoto = async (file: File, userId: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}-${Math.random()}.${fileExt}`;
+    const filePath = `profile-photos/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('profile-photos')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('profile-photos')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const onSubmit = async (data: z.infer<typeof professionalInfoSchema>) => {
+    setIsSubmitting(true);
+
+    try {
+      if (!user) {
+        toast.error("User not authenticated");
+        return;
+      }
+
+      let avatarUrl = "";
+      if (data.profilePhoto) {
+        avatarUrl = await uploadProfilePhoto(data.profilePhoto, user.id);
+      }
+
+      const profileData = {
+        id: user.id,
+        industry: data.industry,
+        skills: data.skills,
+        looking_for: data.purposes,
+        availability: data.availability,
+        meeting_preference: data.meetingPreference,
+        bio: data.bio,
+        onboarding_completed: true,
+        updated_at: new Date().toISOString(),
+        preferred_industries: [data.industry],
+        preferred_project_types: data.purposes,
+        motivation: data.bio,
+        avatar_url: avatarUrl
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileData)
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Detailed error:', error);
+        throw error;
+      }
+
+      toast.success("Profile completed successfully!");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      toast.error(
+        error instanceof Error 
+          ? `Failed to save profile: ${error.message}`
+          : "Failed to save profile. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-4">Complete Your Profile</h1>
-      <p className="text-muted-foreground mb-8">
-        Help others discover you by completing your profile.
-      </p>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-          <CardDescription>
-            Add your personal details to help others connect with you.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                name="full_name"
-                value={profile.full_name || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                name="title"
-                value={profile.title || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea
-              id="bio"
-              name="bio"
-              value={profile.bio || ""}
-              onChange={handleInputChange}
-              placeholder="Write a short bio about yourself"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                name="location"
-                value={profile.location || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="website">Website</Label>
-              <Input
-                id="website"
-                name="website"
-                value={profile.website || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Professional Details</CardTitle>
-          <CardDescription>
-            Share your professional background and interests.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="skills">Skills</Label>
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  className="w-full justify-between"
-                >
-                  {selectedSkills?.length > 0 ? (
-                    selectedSkills.join(", ")
-                  ) : (
-                    <>
-                      Select Skills
-                      {/* <CommandCheck className="ml-2 h-4 w-4 opacity-50 shrink-0" /> */}
-                    </>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0">
-                <Command>
-                  <CommandInput
-                    placeholder="Search skills..."
-                    onValueChange={(value) =>
-                      setSkills(
-                        skillsList.filter((skill) =>
-                          skill.toLowerCase().includes(value.toLowerCase())
-                        )
-                      )
-                    }
-                  />
-                  <CommandList>
-                    <CommandEmpty>No skills found.</CommandEmpty>
-                    <CommandGroup>
-                      {skills.map((skill) => (
-                        <CommandItem
-                          key={skill}
-                          value={skill}
-                          onSelect={() => {
-                            handleSkillsChange(skill);
-                            setOpen(false);
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Complete Your Profile</h1>
+          <p className="text-slate-300">Let's get to know you better to find the perfect matches</p>
+        </div>
+        
+        <Card className="shadow-lg border-0 bg-slate-900/50 backdrop-blur">
+          <CardHeader className="border-b border-slate-700">
+            <CardTitle className="text-xl font-semibold text-white">Professional Information</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <div className="grid grid-cols-1 gap-8">
+                  <FormField
+                    control={form.control}
+                    name="profilePhoto"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col items-center">
+                        <FormLabel className="text-sm font-medium text-slate-300 mb-4">
+                          Profile Photo
+                        </FormLabel>
+                        <ProfilePhotoUpload
+                          userId={user?.id || ""}
+                          currentPhotoUrl={previewUrl}
+                          onPhotoUpdate={(url) => {
+                            setPreviewUrl(url);
+                            field.onChange(url);
                           }}
+                          size="lg"
+                        />
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="industry"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">Industry</FormLabel>
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleIndustryChange(value);
+                          }}
+                          defaultValue={field.value}
                         >
-                          {skill}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="experience">Experience</Label>
-              <select
-                id="experience"
-                name="experience"
-                value={profile.experience || ""}
-                onChange={(e) => handleExperienceChange(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select Experience</option>
-                <option value="Entry Level">Entry Level</option>
-                <option value="Mid Level">Mid Level</option>
-                <option value="Senior Level">Senior Level</option>
-                <option value="Executive Level">Executive Level</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="industry">Industry</Label>
-              <select
-                id="industry"
-                name="industry"
-                value={profile.industry || ""}
-                onChange={(e) => handleIndustryChange(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select Industry</option>
-                {industries.map((industry) => (
-                  <option key={industry} value={industry}>
-                    {industry}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
-              <Input
-                id="linkedinUrl"
-                name="linkedin_url"
-                value={profile.linkedin_url || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="portfolioUrl">Portfolio URL</Label>
-              <Input
-                id="portfolioUrl"
-                name="portfolio_url"
-                value={profile.portfolio_url || ""}
-                onChange={handleInputChange}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Preferences</CardTitle>
-          <CardDescription>
-            Tell us more about your preferences and interests.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="space-y-2">
-            <Label>Preferred Industries</Label>
-            <div className="flex flex-wrap gap-2">
-              {industries.map((industry) => (
-                <div key={industry} className="flex items-center space-x-2">
-                  <Switch
-                    id={`industry-${industry}`}
-                    checked={profile.preferred_industries?.includes(industry) || false}
-                    onCheckedChange={() => handlePreferredIndustriesChange(industry)}
+                          <FormControl>
+                            <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
+                              <SelectValue placeholder="Select your industry" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-800 border-slate-700">
+                            {INDUSTRY_OPTIONS.map((industry) => (
+                              <SelectItem key={industry} value={industry} className="text-slate-200 hover:bg-slate-700">
+                                {industry}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
                   />
-                  <Label htmlFor={`industry-${industry}`}>{industry}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Preferred Project Types</Label>
-            <div className="flex flex-wrap gap-2">
-              {projectTypes.map((projectType) => (
-                <div key={projectType} className="flex items-center space-x-2">
-                  <Switch
-                    id={`projectType-${projectType}`}
-                    checked={profile.preferred_project_types?.includes(projectType) || false}
-                    onCheckedChange={() => handlePreferredProjectTypesChange(projectType)}
+
+                  <FormField
+                    control={form.control}
+                    name="skills"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">Skills</FormLabel>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {availableSkills.map((skill) => (
+                            <FormField
+                              key={skill}
+                              control={form.control}
+                              name="skills"
+                              render={({ field }) => (
+                                <FormItem
+                                  key={skill}
+                                  className="flex flex-row items-center space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(skill)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...field.value, skill])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== skill
+                                              )
+                                            );
+                                      }}
+                                      className="border-slate-600 data-[state=checked]:bg-indigo-600"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-normal text-slate-300">
+                                    {skill}
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
                   />
-                  <Label htmlFor={`projectType-${projectType}`}>{projectType}</Label>
+
+                  <FormField
+                    control={form.control}
+                    name="purposes"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">What are you looking for?</FormLabel>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {PURPOSE_OPTIONS.map((purpose) => (
+                            <FormField
+                              key={purpose}
+                              control={form.control}
+                              name="purposes"
+                              render={({ field }) => (
+                                <FormItem
+                                  key={purpose}
+                                  className="flex flex-row items-center space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(purpose)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...field.value, purpose])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== purpose
+                                              )
+                                            );
+                                      }}
+                                      className="border-slate-600 data-[state=checked]:bg-indigo-600"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-normal text-slate-300">
+                                    {purpose}
+                                  </FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="availability"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-slate-300">Availability</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
+                                <SelectValue placeholder="Select your availability" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-800 border-slate-700">
+                              {AVAILABILITY_OPTIONS.map((option) => (
+                                <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="meetingPreference"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-slate-300">Meeting Preference</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
+                                <SelectValue placeholder="Select your preference" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="bg-slate-800 border-slate-700">
+                              {MEETING_PREFERENCE_OPTIONS.map((option) => (
+                                <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-xs text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="bio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">Bio</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Tell us about yourself, your experience, and what you're looking for..."
+                            className="min-h-[120px] resize-none bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-400"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Looking For</Label>
-            <div className="flex flex-wrap gap-2">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="lookingFor-cofounder"
-                  checked={profile.looking_for?.includes("Co-founder") || false}
-                  onCheckedChange={() => handleLookingForChange("Co-founder")}
-                />
-                <Label htmlFor="lookingFor-cofounder">Co-founder</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="lookingFor-developer"
-                  checked={profile.looking_for?.includes("Developer") || false}
-                  onCheckedChange={() => handleLookingForChange("Developer")}
-                />
-                <Label htmlFor="lookingFor-developer">Developer</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="lookingFor-designer"
-                  checked={profile.looking_for?.includes("Designer") || false}
-                  onCheckedChange={() => handleLookingForChange("Designer")}
-                />
-                <Label htmlFor="lookingFor-designer">Designer</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="lookingFor-marketing"
-                  checked={profile.looking_for?.includes("Marketing") || false}
-                  onCheckedChange={() => handleLookingForChange("Marketing")}
-                />
-                <Label htmlFor="lookingFor-marketing">Marketing</Label>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="availability">Availability</Label>
-              <select
-                id="availability"
-                name="availability"
-                value={profile.availability || ""}
-                onChange={(e) => handleAvailabilityChange(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select Availability</option>
-                <option value="Full-Time">Full-Time</option>
-                <option value="Part-Time">Part-Time</option>
-                <option value="Freelance">Freelance</option>
-                <option value="Contract">Contract</option>
-                <option value="Not Available">Not Available</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="meetingPreference">Meeting Preference</Label>
-              <select
-                id="meetingPreference"
-                name="meetingPreference"
-                value={profile.meeting_preference || ""}
-                onChange={(e) => handleMeetingPreferenceChange(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="">Select Meeting Preference</option>
-                <option value="In-Person">In-Person</option>
-                <option value="Virtual">Virtual</option>
-                <option value="No Preference">No Preference</option>
-              </select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Profile Photo</CardTitle>
-          <CardDescription>Upload your profile photo.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <ProfilePhotoUpload
-            userId={user?.id || ""}
-            currentPhotoUrl={photoURL}
-            onPhotoUpdate={handlePhotoUpdate}
-          />
-        </CardContent>
-      </Card>
-
-      <Button onClick={handleSaveProfile} disabled={isSaving}>
-        {isSaving ? "Saving..." : "Save Profile"}
-      </Button>
+                <CardFooter className="flex justify-end px-0 pt-4">
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Complete Profile"
+                    )}
+                  </Button>
+                </CardFooter>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

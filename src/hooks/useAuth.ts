@@ -7,57 +7,25 @@ type SignUpMetadata = {
   full_name?: string;
   stage?: string;
   location?: string;
-  title?: string;
 };
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-
-        if (session?.user) {
-          // Check onboarding status
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('onboarding_completed')
-            .eq('id', session.user.id)
-            .single();
-
-          if (!error && data) {
-            setOnboardingCompleted(data.onboarding_completed);
-          }
-        } else {
-          setOnboardingCompleted(null);
-        }
-
         setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
-      if (session?.user) {
-        // Check onboarding status
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('id', session.user.id)
-          .single();
-
-        if (!error && data) {
-          setOnboardingCompleted(data.onboarding_completed);
-        }
-      }
-
       setLoading(false);
     });
 
@@ -74,19 +42,6 @@ export const useAuth = () => {
       });
       
       if (error) throw error;
-
-      // Check onboarding status after sign in
-      if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('onboarding_completed')
-          .eq('id', data.user.id)
-          .single();
-
-        if (!profileError && profile) {
-          setOnboardingCompleted(profile.onboarding_completed);
-        }
-      }
       
       return { success: true, error: null };
     } catch (error) {
@@ -104,7 +59,6 @@ export const useAuth = () => {
             full_name: metadata?.full_name,
             stage: metadata?.stage,
             location: metadata?.location,
-            title: metadata?.title,
           },
         },
       });
@@ -117,23 +71,16 @@ export const useAuth = () => {
           .from('profiles')
           .insert({
             id: data.user.id,
-            full_name: metadata?.full_name || '',
-            stage: metadata?.stage || '',
-            location: metadata?.location || '',
-            title: metadata?.title || '',
+            full_name: metadata?.full_name,
+            stage: metadata?.stage,
+            location: metadata?.location,
             onboarding_completed: false,
             updated_at: new Date().toISOString(),
-            skills: [],
-            looking_for: [],
-            preferred_industries: [],
-            preferred_project_types: [],
           });
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
           toast.error('Error creating profile. Please try again.');
-        } else {
-          setOnboardingCompleted(false);
         }
       }
       
@@ -147,12 +94,11 @@ export const useAuth = () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      setOnboardingCompleted(null);
       return { success: true, error: null };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   };
 
-  return { user, session, loading, onboardingCompleted, signIn, signUp, signOut };
+  return { user, session, loading, signIn, signUp, signOut };
 };
