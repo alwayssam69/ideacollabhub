@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -17,6 +16,8 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/useUser";
 
 type AuthMode = "signin" | "signup";
 
@@ -36,6 +37,7 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
   const [authMode, setAuthMode] = useState<AuthMode>(mode);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const user = useUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -53,10 +55,21 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
         const { success, error } = await signIn(values.email, values.password);
         
         if (success) {
-          toast.success("Welcome back!", {
-            description: "You have successfully signed in.",
-          });
-          navigate('/');
+          // Check if user needs onboarding
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("onboarding_completed")
+            .eq("id", user?.id)
+            .single();
+
+          if (!profile?.onboarding_completed) {
+            navigate('/onboarding');
+          } else {
+            toast.success("Welcome back!", {
+              description: "You have successfully signed in.",
+            });
+            navigate('/');
+          }
         } else {
           toast.error("Sign in failed", {
             description: error,
@@ -69,7 +82,7 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
           toast.success("Welcome to IdeaCollabHub!", {
             description: "Your account has been created successfully. Please check your email to verify your account.",
           });
-          navigate('/onboarding');
+          navigate('/login');
         } else {
           toast.error("Sign up failed", {
             description: error,

@@ -112,25 +112,25 @@ const preferredWorkTypes = [
 
 export default function OnboardingPage() {
   const { user } = useAuth();
-  const { profile, updateProfile, loading: profileLoading } = useProfile();
+  const { updateProfile } = useProfile();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    full_name: profile?.full_name || "",
-    title: profile?.title || "",
-    skills: profile?.skills || [],
-    looking_for: profile?.looking_for || [],
-    location: profile?.location || "",
-    bio: profile?.bio || "",
-    experience_level: profile?.experience_level || "",
-    project_stage: profile?.project_stage || "",
-    preferred_industries: profile?.preferred_industries || [],
-    preferred_work_type: profile?.preferred_work_type || [],
-    availability: profile?.availability || "Full-time",
-    linkedin_url: profile?.linkedin_url || "",
-    portfolio_url: profile?.portfolio_url || "",
+    full_name: user?.user_metadata.full_name || "",
+    title: user?.user_metadata.title || "Founder",
+    skills: user?.user_metadata.skills || [],
+    looking_for: user?.user_metadata.looking_for || [],
+    location: user?.user_metadata.location || "",
+    bio: user?.user_metadata.bio || "",
+    experience_level: user?.user_metadata.experience_level || "Student",
+    project_stage: user?.user_metadata.project_stage || "Ideation",
+    preferred_industries: user?.user_metadata.preferred_industries || [],
+    preferred_work_type: user?.user_metadata.preferred_work_type || ["Full-time"],
+    availability: user?.user_metadata.availability || "Full-time",
+    linkedin_url: user?.user_metadata.linkedin_url || "",
+    portfolio_url: user?.user_metadata.portfolio_url || "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -171,38 +171,26 @@ export default function OnboardingPage() {
     try {
       setLoading(true);
 
-      // Update the profiles table
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
-          full_name: formData.full_name,
-          title: formData.title,
-          skills: formData.skills,
-          looking_for: formData.looking_for,
-          location: formData.location,
-          bio: formData.bio,
-          experience_level: formData.experience_level,
-          project_stage: formData.project_stage,
-          preferred_industries: formData.preferred_industries,
-          preferred_work_type: formData.preferred_work_type,
-          availability: formData.availability,
-          linkedin_url: formData.linkedin_url,
-          portfolio_url: formData.portfolio_url,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
+      // Prepare profile data
+      const profileData = {
+        full_name: formData.full_name,
+        title: formData.title,
+        skills: formData.skills,
+        looking_for: formData.looking_for,
+        location: formData.location,
+        bio: formData.bio,
+        experience_level: formData.experience_level,
+        project_stage: formData.project_stage,
+        preferred_industries: formData.preferred_industries,
+        preferred_work_type: formData.preferred_work_type,
+        availability: formData.availability,
+        linkedin_url: formData.linkedin_url,
+        portfolio_url: formData.portfolio_url,
+        onboarding_completed: true,
+      };
 
-      if (profileError) {
-        console.error("Profile update error:", profileError);
-        throw new Error(profileError.message);
-      }
-
-      // Wait for a short moment to ensure the update is processed
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Update local profile state
-      await updateProfile();
+      // Update profile using the hook
+      await updateProfile(profileData);
 
       toast.success("Profile completed successfully!");
       navigate("/dashboard", { replace: true });
