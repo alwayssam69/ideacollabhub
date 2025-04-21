@@ -46,7 +46,7 @@ const SKILLS = [
   { value: 'blockchain', label: 'Blockchain' },
 ];
 
-export default function OnboardingPage() {
+export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -243,4 +243,4 @@ export default function OnboardingPage() {
       </Card>
     </div>
   );
-}
+} 

@@ -1,25 +1,44 @@
+import { useEffect } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
 
-export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { user, loading } = useAuth();
-  
-  // If still loading authentication state, you can show a loading spinner
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  // Redirect to sign in if not authenticated
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { user } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkOnboardingStatus = async () => {
+      if (!user) return;
+
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        // If user is not on onboarding page and hasn't completed onboarding, redirect to onboarding
+        if (!profile?.onboarding_completed && location.pathname !== '/onboarding') {
+          window.location.href = '/onboarding';
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [user, location.pathname]);
+
   if (!user) {
-    return <Navigate to="/auth/signin" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  
-  // Render children if authenticated
+
   return <>{children}</>;
-};
+}
