@@ -1,12 +1,20 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Tables } from '@/integrations/supabase/types';
 
-export type Message = Tables<'messages'> & {
-  sender_profile?: Tables<'profiles'>;
+export type Message = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  created_at: string;
+  read: boolean | null;
+  sender_profile?: {
+    full_name: string;
+    avatar_url: string;
+  };
 };
 
 export type Conversation = {
@@ -111,9 +119,9 @@ export function useUserMessages() {
           const { profile, last_message, unread_count } = userData;
           
           conversationsArray.push({
-            profile,
-            lastMessage: last_message as Message,
-            unreadCount: unread_count
+            profile: profile as Tables<'profiles'>,
+            lastMessage: last_message as Message | null,
+            unreadCount: unread_count as number
           });
         }
         
@@ -152,8 +160,13 @@ export function useUserMessages() {
           
         if (error) throw error;
         
-        // Update messages state
-        setMessages(data as Message[]);
+        // Update messages state with proper type casting
+        const typedMessages = data.map(msg => ({
+          ...msg,
+          sender_profile: msg.sender_profile || { full_name: 'Unknown', avatar_url: '' }
+        })) as Message[];
+        
+        setMessages(typedMessages);
         
         // Mark messages as read
         if (conversation.unreadCount > 0) {

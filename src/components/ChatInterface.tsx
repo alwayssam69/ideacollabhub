@@ -13,7 +13,7 @@ interface Message {
   recipient_id: string;
   content: string;
   created_at: string;
-  read: boolean;
+  read: boolean | null;
   sender_profile: {
     full_name: string;
     avatar_url: string;
@@ -26,7 +26,7 @@ interface DatabaseMessage {
   recipient_id: string;
   content: string;
   created_at: string;
-  read: boolean;
+  read: boolean | null;
 }
 
 export function ChatInterface({ userId, recipientId }: { userId: string; recipientId: string }) {
@@ -50,13 +50,13 @@ export function ChatInterface({ userId, recipientId }: { userId: string; recipie
 
         if (error) throw error;
         
-        // Transform the data to match our Message interface
+        // Transform the data with proper type casting
         const transformedMessages = data.map(msg => ({
           ...msg,
-          sender_profile: msg.sender
-        }));
+          sender_profile: msg.sender || { full_name: 'Unknown', avatar_url: '' }
+        })) as Message[];
         
-        setMessages(transformedMessages as Message[]);
+        setMessages(transformedMessages);
       } catch (error) {
         console.error('Error fetching messages:', error);
         toast.error('Failed to load messages');
@@ -86,10 +86,13 @@ export function ChatInterface({ userId, recipientId }: { userId: string; recipie
             .single();
 
           if (requesterProfile) {
-            setMessages((prev) => [
-              ...prev,
-              { ...newMessage, sender_profile: requesterProfile },
-            ]);
+            // Using type assertion for message
+            const messageWithProfile = {
+              ...newMessage,
+              sender_profile: requesterProfile
+            } as Message;
+            
+            setMessages((prev) => [...prev, messageWithProfile]);
           }
         }
       )
@@ -218,4 +221,4 @@ export function ChatInterface({ userId, recipientId }: { userId: string; recipie
       </div>
     </div>
   );
-} 
+}

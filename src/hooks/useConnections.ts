@@ -1,6 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
+
+interface ConnectionProfile {
+  full_name: string;
+  title: string;
+  avatar_url: string;
+}
 
 interface Connection {
   id: string;
@@ -8,16 +16,8 @@ interface Connection {
   recipient_id: string;
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
-  requester_profile: {
-    full_name: string;
-    title: string;
-    avatar_url: string;
-  };
-  recipient_profile: {
-    full_name: string;
-    title: string;
-    avatar_url: string;
-  };
+  requester_profile: ConnectionProfile;
+  recipient_profile: ConnectionProfile;
 }
 
 export const useConnections = (userId: string) => {
@@ -41,10 +41,14 @@ export const useConnections = (userId: string) => {
 
         if (connectionsError) throw connectionsError;
 
-        const acceptedConnections = connectionsData.filter(
+        // Cast to proper type
+        const typedConnections = connectionsData as unknown as Connection[];
+
+        const acceptedConnections = typedConnections.filter(
           (conn) => conn.status === 'accepted'
         );
-        const pending = connectionsData.filter(
+        
+        const pending = typedConnections.filter(
           (conn) => conn.status === 'pending' && conn.recipient_id === userId
         );
 
@@ -182,4 +186,4 @@ export const useConnections = (userId: string) => {
     sendConnectionRequest,
     respondToRequest,
   };
-}; 
+};
