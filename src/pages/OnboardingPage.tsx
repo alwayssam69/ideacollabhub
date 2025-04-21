@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -63,7 +64,36 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!user) {
       navigate('/login');
+      return;
     }
+    
+    // Check if user already has some profile data
+    const fetchProfileData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setFormData({
+            full_name: data.full_name || '',
+            role: data.role || '',
+            skills: data.skills || [],
+            looking_for: data.looking_for || [],
+            location: data.location || '',
+            bio: data.bio || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+    
+    fetchProfileData();
   }, [user, navigate]);
 
   useEffect(() => {
@@ -88,6 +118,7 @@ export default function OnboardingPage() {
         .update({
           ...formData,
           onboarding_completed: true,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', user.id);
 

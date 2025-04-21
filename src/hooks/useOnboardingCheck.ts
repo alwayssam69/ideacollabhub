@@ -1,15 +1,20 @@
+
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useOnboardingCheck() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       if (!user) return;
+      
+      // Don't redirect if the user is already on the onboarding page
+      if (location.pathname === '/onboarding') return;
 
       try {
         const { data: profile, error } = await supabase
@@ -29,5 +34,5 @@ export function useOnboardingCheck() {
     };
 
     checkOnboardingStatus();
-  }, [user, navigate]);
+  }, [user, navigate, location.pathname]);
 } 

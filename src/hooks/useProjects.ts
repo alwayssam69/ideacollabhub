@@ -28,7 +28,6 @@ export const useProjects = (
       try {
         setLoading(true);
 
-        // Use explicit typing to avoid deep instantiation errors
         let query = supabase.from("projects").select("*");
 
         if (selectedCategory) {
@@ -44,31 +43,29 @@ export const useProjects = (
           query = query.contains("required_skills", [selectedSkill]);
         }
 
-        const { data: rawProjects, error } = await query;
+        const { data, error } = await query;
 
         if (error) throw error;
 
-        // Use explicit casting to Project[] to avoid deep instantiation
-        const projectsData = rawProjects as unknown as Project[] || [];
-        setProjects(projectsData);
+        const projectsData = data || [];
+        setProjects(projectsData as Project[]);
 
         const userIds = [...new Set(projectsData.map((p) => p.user_id))];
 
         if (userIds.length > 0) {
-          const { data: rawProfiles, error: profileError } = await supabase
+          const { data: profilesData, error: profileError } = await supabase
             .from("profiles")
             .select("*")
             .in("id", userIds);
 
           if (profileError) throw profileError;
 
-          // Use explicit casting to Profile[] to avoid deep instantiation
-          const profilesData = rawProfiles as unknown as Profile[] || [];
-          
           const profilesMap: Record<string, Profile> = {};
-          profilesData.forEach((profile) => {
-            profilesMap[profile.id] = profile;
-          });
+          if (profilesData) {
+            profilesData.forEach((profile) => {
+              profilesMap[profile.id] = profile as Profile;
+            });
+          }
 
           setCreators(profilesMap);
         }

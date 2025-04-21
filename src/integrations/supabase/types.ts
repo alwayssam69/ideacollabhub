@@ -61,101 +61,86 @@ export type Database = {
           recipient_id?: string
           sender_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
+          availability: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
           experience: string | null
           full_name: string | null
           id: string
+          industry: string | null
+          linkedin_url: string | null
           location: string | null
           looking_for: string[] | null
+          meeting_preference: string | null
+          motivation: string | null
+          onboarding_completed: boolean | null
+          portfolio_url: string | null
+          preferred_industries: string[] | null
+          preferred_project_types: string[] | null
+          project_description: string | null
+          project_stage: string | null
           skills: string[] | null
+          stage: string | null
           title: string | null
           updated_at: string
           username: string | null
-          stage: string | null
-          industry: string | null
-          availability: string | null
-          meeting_preference: string | null
-          onboarding_completed: boolean | null
-          project_stage: string | null
-          project_description: string | null
-          preferred_industries: string[] | null
-          preferred_project_types: string[] | null
-          motivation: string | null
-          linkedin_url: string | null
-          portfolio_url: string | null
         }
         Insert: {
+          availability?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           experience?: string | null
           full_name?: string | null
           id: string
+          industry?: string | null
+          linkedin_url?: string | null
           location?: string | null
           looking_for?: string[] | null
+          meeting_preference?: string | null
+          motivation?: string | null
+          onboarding_completed?: boolean | null
+          portfolio_url?: string | null
+          preferred_industries?: string[] | null
+          preferred_project_types?: string[] | null
+          project_description?: string | null
+          project_stage?: string | null
           skills?: string[] | null
+          stage?: string | null
           title?: string | null
           updated_at?: string
           username?: string | null
-          stage?: string | null
-          industry?: string | null
-          availability?: string | null
-          meeting_preference?: string | null
-          onboarding_completed?: boolean | null
-          project_stage?: string | null
-          project_description?: string | null
-          preferred_industries?: string[] | null
-          preferred_project_types?: string[] | null
-          motivation?: string | null
-          linkedin_url?: string | null
-          portfolio_url?: string | null
         }
         Update: {
+          availability?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           experience?: string | null
           full_name?: string | null
           id?: string
+          industry?: string | null
+          linkedin_url?: string | null
           location?: string | null
           looking_for?: string[] | null
+          meeting_preference?: string | null
+          motivation?: string | null
+          onboarding_completed?: boolean | null
+          portfolio_url?: string | null
+          preferred_industries?: string[] | null
+          preferred_project_types?: string[] | null
+          project_description?: string | null
+          project_stage?: string | null
           skills?: string[] | null
+          stage?: string | null
           title?: string | null
           updated_at?: string
           username?: string | null
-          stage?: string | null
-          industry?: string | null
-          availability?: string | null
-          meeting_preference?: string | null
-          onboarding_completed?: boolean | null
-          project_stage?: string | null
-          project_description?: string | null
-          preferred_industries?: string[] | null
-          preferred_project_types?: string[] | null
-          motivation?: string | null
-          linkedin_url?: string | null
-          portfolio_url?: string | null
         }
         Relationships: []
       }
