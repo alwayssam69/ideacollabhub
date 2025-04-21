@@ -16,7 +16,10 @@ export function MainLayout() {
         <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background/90">
           <Header />
           <div className="flex-1 flex container">
-            <SideNav className="w-48 shrink-0 -ml-4 hidden md:block" />
+            {/* Remove className from SideNav as it doesn't accept this prop */}
+            <div className="w-48 shrink-0 -ml-4 hidden md:block">
+              <SideNav />
+            </div>
             <main className="flex-1 py-6">
               <Outlet />
             </main>

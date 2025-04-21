@@ -47,8 +47,8 @@ export const useProjects = (
 
         if (error) throw error;
 
-        // Use a simpler approach to avoid deep type instantiation
-        const projectsData = (rawProjects || []) as Project[];
+        // Explicitly type the projects to avoid deep instantiation
+        const projectsData = rawProjects ? rawProjects as Project[] : [];
         setProjects(projectsData);
 
         const userIds = [...new Set(projectsData.map((p) => p.user_id))];
@@ -61,12 +61,14 @@ export const useProjects = (
 
           if (profileError) throw profileError;
 
-          // Create a map of user IDs to profiles
+          // Create a map of user IDs to profiles with explicit typing
           const profilesMap: Record<string, Profile> = {};
-          const profilesArray = (rawProfiles || []) as Profile[];
+          const profilesArray = rawProfiles ? rawProfiles as Profile[] : [];
           
           profilesArray.forEach((profile) => {
-            profilesMap[profile.id] = profile;
+            if (profile && profile.id) {
+              profilesMap[profile.id] = profile;
+            }
           });
 
           setCreators(profilesMap);

@@ -28,12 +28,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
+import { ProfileWithWebsite } from "@/types/onboarding";
 
 type Profile = Tables<'profiles'>;
 
 const industries = [
   "Technology",
-  "Healthcare",
+  "Healthcare", 
   "Finance",
   "Education",
   "Retail",
@@ -162,9 +163,9 @@ const skillsList = [
 ];
 
 export default function OnboardingPage() {
-  const navigate = useNavigate(); // Replace useRouter with useNavigate
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile>({
+  const [profile, setProfile] = useState<ProfileWithWebsite>({
     id: user?.id || "",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -305,26 +306,21 @@ export default function OnboardingPage() {
     }
   };
 
-  // Fix the function with the onUploadProgress issue
   const handleFileUpload = async (file: File) => {
-    // Generate a unique file path
     const fileExt = file.name.split('.').pop();
     const filePath = `profile-photos/${user?.id}-${Math.random()}.${fileExt}`;
     
     try {
-      // Update to use the standard upload method without onUploadProgress
       const { error: uploadError } = await supabase.storage
         .from('profile-photos')
         .upload(filePath, file);
         
       if (uploadError) throw uploadError;
       
-      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('profile-photos')
         .getPublicUrl(filePath);
         
-      // Update the profile
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
