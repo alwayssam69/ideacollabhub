@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -115,9 +114,12 @@ export default function OnboardingPage() {
     );
 
     try {
-      profileSchema.pick(
-        Object.fromEntries(stepFields[currentStep].map(field => [field, true]))
-      ).parse(stepData);
+      const fieldsToValidate = stepFields[currentStep].reduce((acc, field) => {
+        acc[field] = true;
+        return acc;
+      }, {} as Record<keyof typeof formData, true>);
+      
+      profileSchema.pick(fieldsToValidate as any).parse(stepData);
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {

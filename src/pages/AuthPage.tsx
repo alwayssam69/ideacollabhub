@@ -1,7 +1,7 @@
 
 import { useParams } from "react-router-dom";
 import { Icons } from "@/components/ui/icons";
-import AuthForm from "@/components/auth/AuthForm";
+import { AuthForm } from "@/components/auth/AuthForm";
 
 export default function AuthPage() {
   const { mode = "signin" } = useParams<{ mode: "signin" | "signup" }>();

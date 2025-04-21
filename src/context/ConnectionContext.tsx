@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,8 +7,8 @@ import { Tables } from '@/integrations/supabase/types';
 
 interface ConnectionProfile {
   id: string;
-  full_name: string;
-  avatar_url: string;
+  full_name: string | null;
+  avatar_url: string | null;
 }
 
 interface Connection {
@@ -25,10 +26,12 @@ interface ConnectionContextType {
   connections: Connection[];
   pendingRequests: Connection[];
   loading: boolean;
-  sendConnectionRequest: (recipientId: string) => Promise<void>;
+  sendConnectionRequest: (recipientId: string) => Promise<{ error?: string }>;
   acceptConnection: (connectionId: string) => Promise<void>;
   rejectConnection: (connectionId: string) => Promise<void>;
+  checkConnectionStatus: (userId: string) => 'none' | 'pending' | 'accepted' | 'rejected';
   findPotentialMatches: () => Promise<any[]>;
+  refresh: () => Promise<void>;
 }
 
 const ConnectionContext = createContext<ConnectionContextType | undefined>(undefined);
@@ -63,7 +66,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
           if (payload.new) {
             const newConnection = payload.new as Connection;
             if (newConnection.recipient_id === user?.id && newConnection.status === 'pending') {
-              setPendingRequests((prev) => [...prev, newConnection]);
+              setPendingRequests((prev) => [...prev, newConnection as Connection]);
             }
           }
         }
@@ -107,12 +110,12 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         return;
       }
 
-      // Process the data
+      // Process the data safely with type assertions
       const formattedConnections = connectionsData.map(conn => ({
         ...conn,
         status: conn.status as 'pending' | 'accepted' | 'rejected',
-        requester: conn.requester as ConnectionProfile,
-        recipient: conn.recipient as ConnectionProfile
+        requester: (conn.requester as unknown) as ConnectionProfile,
+        recipient: (conn.recipient as unknown) as ConnectionProfile
       }));
 
       // Filter connections based on status
@@ -134,8 +137,34 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const checkConnectionStatus = (userId: string): 'none' | 'pending' | 'accepted' | 'rejected' => {
+    if (!user) return 'none';
+    
+    // Check if there's an accepted connection
+    const acceptedConnection = connections.find(
+      conn => 
+        (conn.requester_id === user.id && conn.recipient_id === userId) || 
+        (conn.requester_id === userId && conn.recipient_id === user.id)
+    );
+    if (acceptedConnection) return acceptedConnection.status;
+    
+    // Check if there's a pending request
+    const pendingOutgoing = connections.concat(pendingRequests).find(
+      conn => conn.requester_id === user.id && conn.recipient_id === userId && conn.status === 'pending'
+    );
+    if (pendingOutgoing) return 'pending';
+    
+    return 'none';
+  };
+
   const sendConnectionRequest = async (recipientId: string) => {
-    if (!user) return;
+    if (!user) return { error: 'Not authenticated' };
+
+    // Check if connection already exists
+    const existingStatus = checkConnectionStatus(recipientId);
+    if (existingStatus !== 'none') {
+      return { error: `Connection already ${existingStatus}` };
+    }
 
     try {
       const { error } = await supabase.from('connections').insert({
@@ -145,10 +174,13 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       });
 
       if (error) throw error;
-      toast.success('Connection request sent');
-    } catch (error) {
+      
+      // Refresh connections after sending a new request
+      await fetchConnections();
+      return {};
+    } catch (error: any) {
       console.error('Error sending connection request:', error);
-      toast.error('Failed to send connection request');
+      return { error: error.message || 'Failed to send connection request' };
     }
   };
 
@@ -203,9 +235,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         .from('profiles')
         .select('*')
         .not('id', 'eq', user.id)
-        .contains('preferred_industries', profile.industry)
-        .contains('preferred_project_types', profile.project_stage)
-        .overlaps('skills', profile.skills)
+        .contains('preferred_industries', profile.industry ? [profile.industry] : [])
         .limit(10);
 
       if (error) throw error;
@@ -215,6 +245,11 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       toast.error('Failed to find potential matches');
       return [];
     }
+  };
+
+  // Add a refresh method to manually trigger refreshing connections
+  const refresh = async () => {
+    await fetchConnections();
   };
 
   return (
@@ -227,6 +262,8 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         acceptConnection,
         rejectConnection,
         findPotentialMatches,
+        checkConnectionStatus,
+        refresh
       }}
     >
       {children}
