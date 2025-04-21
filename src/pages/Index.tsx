@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
-import { Stars } from "@react-three/drei";
+import { Stars, OrbitControls, PerspectiveCamera, useGLTF } from "@react-three/drei";
 import { 
   Button, 
   Card, 
   CardContent,
   HoverCard,
   HoverCardContent,
-  HoverCardTrigger
+  HoverCardTrigger,
+  Input,
+  Label
 } from "@/components/ui";
 import { 
   ArrowRight, 
@@ -28,11 +30,19 @@ import {
   Network,
   Target,
   Star,
-  Quote
+  Quote,
+  Mail,
+  Check,
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Play,
+  Pause
 } from "lucide-react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useInView } from "react-intersection-observer";
 
 // Container component for consistent max-width and padding
 function Container({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -251,19 +261,64 @@ function TestimonialCard({
   );
 }
 
+// 3D Model Component
+function Model({ url }: { url: string }) {
+  const { scene } = useGLTF(url);
+  return <primitive object={scene} />;
+}
+
+// Particle Background Component
+function ParticleBackground() {
+  return (
+    <div className="absolute inset-0 -z-10 overflow-hidden">
+      <Canvas>
+        <PerspectiveCamera makeDefault position={[0, 0, 5]} />
+        <OrbitControls enableZoom={false} />
+        <ambientLight intensity={0.5} />
+        <pointLight position={[10, 10, 10]} />
+        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+      </Canvas>
+    </div>
+  );
+}
+
+// Video Background Component
+function VideoBackground({ src }: { src: string }) {
+  return (
+    <div className="absolute inset-0 -z-10 overflow-hidden">
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src={src} type="video/mp4" />
+      </video>
+      <div className="absolute inset-0 bg-gradient-to-b from-background/80 to-background/20" />
+    </div>
+  );
+}
+
 export default function Index() {
   const { scrollY } = useScroll();
   const headerOpacity = useTransform(scrollY, [0, 100], [1, 0.98]);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  const testimonials = [
+    {
+      quote: "IdeaCollabHub transformed how we build products. The quality of connections and collaboration is unmatched.",
+      author: "Sarah Chen",
+      role: "Product Lead at TechCorp",
+      video: "/testimonial1.mp4"
+    },
+    // ... more testimonials
+  ];
 
   return (
     <div className="relative min-h-screen bg-background">
-      {/* Gradient background */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background/80" />
-        <div className="absolute left-1/2 top-0 -translate-x-1/2 blur-3xl">
-          <div className="h-[600px] w-[1200px] rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent opacity-20" />
-        </div>
-      </div>
+      <ParticleBackground />
       
       {/* Navigation */}
       <motion.header 
@@ -275,37 +330,60 @@ export default function Index() {
             <Link to="/" className="text-lg font-semibold">
               IdeaCollabHub
             </Link>
-            <Button asChild variant="default" size="sm" className="h-8 px-3 text-sm">
-              <Link to="/auth/signup">
-                Get Started
-                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Link>
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/about">About</Link>
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/contact">Contact</Link>
+              </Button>
+              <Button asChild variant="default" size="sm" className="h-8 px-3 text-sm">
+                <Link to="/auth/signup">
+                  Get Started
+                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
           </nav>
         </Container>
       </motion.header>
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-16">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <Container>
           <div className="grid lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-7">
               <AnimatedSection delay={100}>
                 <div className="space-y-6">
-                  <h1 className="text-4xl font-bold tracking-tight lg:text-5xl">
+                  <motion.h1 
+                    className="text-5xl font-bold tracking-tight lg:text-6xl"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
                     Where Ideas Meet{" "}
                     <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-foreground">
                       Collaboration
                     </span>
-                  </h1>
-                  <p className="text-lg text-muted-foreground">
+                  </motion.h1>
+                  <motion.p 
+                    className="text-xl text-muted-foreground"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
                     Connect with talented co-founders, developers, and creators. Build your next big project with the perfect team.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  </motion.p>
+                  <motion.div 
+                    className="flex flex-col sm:flex-row gap-3"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
                     <Button 
                       asChild 
                       size="default"
-                      className="h-10 px-4 text-sm"
+                      className="h-12 px-6 text-base"
                     >
                       <Link to="/auth/signup">
                         Start Your Journey
@@ -316,222 +394,137 @@ export default function Index() {
                       asChild 
                       size="default" 
                       variant="outline"
-                      className="h-10 px-4 text-sm"
+                      className="h-12 px-6 text-base"
                     >
                       <Link to="/discover">
                         Explore Projects
                       </Link>
                     </Button>
-                  </div>
+                  </motion.div>
                 </div>
               </AnimatedSection>
             </div>
-
             <div className="lg:col-span-5">
-              <AnimatedSection delay={300}>
-                <div className="relative aspect-square rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 p-6 border border-border/50 shadow-lg shadow-primary/5">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="relative w-full h-full">
-                      {/* Central hub */}
-                      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                        <Network className="h-12 w-12 text-primary" />
-                      </div>
-                      
-                      {/* Connecting nodes */}
-                      {[
-                        { top: '10%', left: '20%', icon: Code },
-                        { top: '80%', left: '30%', icon: Users },
-                        { top: '20%', left: '80%', icon: Rocket },
-                        { top: '70%', left: '75%', icon: MessageCircle }
-                      ].map((node, index) => (
-                        <motion.div
-                          key={index}
-                          className="absolute w-16 h-16 rounded-full bg-card/70 border border-primary/20 flex items-center justify-center"
-                          style={{ top: node.top, left: node.left }}
-                          initial={{ scale: 0, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: index * 0.2, type: "spring" }}
-                        >
-                          <node.icon className="h-6 w-6 text-primary/80" />
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </AnimatedSection>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
+                className="relative"
+              >
+                <Canvas>
+                  <ambientLight intensity={0.5} />
+                  <pointLight position={[10, 10, 10]} />
+                  <Model url="/3d-model.glb" />
+                  <OrbitControls enableZoom={false} />
+                </Canvas>
+              </motion.div>
             </div>
           </div>
         </Container>
       </section>
 
       {/* Features Section */}
-      <section className="py-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-muted/30 to-transparent" />
-        <Container className="relative">
-          <AnimatedSection>
-            <div className="text-center mb-10">
-              <h2 className="text-2xl font-bold mb-3">
-                Why Choose IdeaCollabHub
-              </h2>
-              <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
-                Our platform provides everything you need to find the perfect team and bring your ideas to life.
-              </p>
-            </div>
-          </AnimatedSection>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <FeatureCard
-              icon={Target}
-              title="Smart Matching"
-              description="Our algorithm connects you with collaborators who complement your skills and share your vision."
-            />
-            <FeatureCard
-              icon={MessageCircle}
-              title="Real-Time Chat"
-              description="Communicate seamlessly with potential teammates through our built-in messaging system."
-            />
-            <FeatureCard
-              icon={Shield}
-              title="Verified Profiles"
-              description="Connect with confidence knowing all users are verified professionals and students."
-            />
-            <FeatureCard
-              icon={Share2}
-              title="Project Showcase"
-              description="Share your projects and find opportunities to collaborate with other builders."
-            />
+      <section className="py-24 relative">
+        <Container>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold mb-4">Premium Features</h2>
+            <p className="text-xl text-muted-foreground">
+              Everything you need to build your next big idea
+            </p>
+          </motion.div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <FeatureCard {...feature} />
+              </motion.div>
+            ))}
           </div>
-        </Container>
-      </section>
-
-      {/* How It Works */}
-      <section className="py-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-muted/20 to-transparent" />
-        <Container className="relative">
-          <AnimatedSection>
-            <div className="text-center mb-10">
-              <h2 className="text-2xl font-bold mb-3">
-                How It Works
-              </h2>
-              <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
-                Get started in three simple steps
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  icon: Users,
-                  title: "Create Your Profile",
-                  description: "Set up your profile with your skills, interests, and what you're looking to build."
-                },
-                {
-                  icon: Search,
-                  title: "Find Your Match",
-                  description: "Browse projects and connect with potential collaborators based on mutual interests."
-                },
-                {
-                  icon: Rocket,
-                  title: "Start Building",
-                  description: "Form your team and begin working on exciting projects together."
-                }
-              ].map((step, index) => (
-                <motion.div
-                  key={index}
-                  className="relative p-5 rounded-lg border border-border/50 bg-gradient-to-b from-card/50 to-card/30 shadow-sm"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.2 }}
-                >
-                  <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                    <step.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="text-base font-semibold mb-2">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </AnimatedSection>
         </Container>
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-muted/10 to-transparent" />
-        <Container className="relative">
-          <AnimatedSection>
-            <div className="text-center mb-10">
-              <h2 className="text-2xl font-bold mb-3">
-                What Our Users Say
-              </h2>
-              <p className="text-muted-foreground text-sm max-w-2xl mx-auto">
-                Join thousands of founders and developers who have found their perfect team
-              </p>
-            </div>
-          </AnimatedSection>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            <TestimonialCard
-              quote="IdeaCollabHub helped me find the perfect technical co-founder for my startup. The matching algorithm is spot-on!"
-              author="Sarah Chen"
-              role="Founder, TechFlow"
-              delay={100}
-            />
-            <TestimonialCard
-              quote="As a developer, I love how easy it is to discover interesting projects and connect with passionate founders."
-              author="Michael Rodriguez"
-              role="Full-stack Developer"
-              delay={200}
-            />
-            <TestimonialCard
-              quote="The platform's verification system gives me confidence that I'm connecting with serious professionals."
-              author="Emma Thompson"
-              role="UX Designer"
-              delay={300}
-            />
-          </div>
-
-          <div className="mt-10 text-center">
-            <div className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <span className="ml-2">4.9/5 from 500+ reviews</span>
+      <section className="py-24 relative overflow-hidden">
+        <VideoBackground src={testimonials[activeTestimonial].video} />
+        <Container>
+          <div className="relative z-10">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTestimonial}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.5 }}
+                className="max-w-3xl mx-auto text-center"
+              >
+                <TestimonialCard {...testimonials[activeTestimonial]} />
+              </motion.div>
+            </AnimatePresence>
+            
+            <div className="flex justify-center items-center gap-4 mt-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setActiveTestimonial((prev) => (prev - 1 + testimonials.length) % testimonials.length)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setActiveTestimonial((prev) => (prev + 1) % testimonials.length)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </Container>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16">
+      {/* Newsletter Section */}
+      <section className="py-24">
         <Container>
-          <div className="mx-auto max-w-2xl text-center">
-            <AnimatedSection>
-              <div className="relative rounded-xl bg-gradient-to-b from-primary/5 to-transparent p-8 shadow-lg shadow-primary/5 border border-primary/10">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 opacity-20 blur-2xl" />
-                <div className="relative">
-                  <h2 className="text-2xl font-bold mb-4">
-                    Ready to Find Your Perfect Team?
-                  </h2>
-                  <p className="text-sm text-muted-foreground mb-6">
-                    Join our community of builders, creators, and innovators today.
-                  </p>
-                  <Button 
-                    asChild 
-                    size="default"
-                    className="h-10 px-4 text-sm"
-                  >
-                    <Link to="/auth/signup">
-                      Get Started Now
-                      <ArrowRight className="ml-1.5 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </AnimatedSection>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="max-w-2xl mx-auto text-center"
+          >
+            <h2 className="text-3xl font-bold mb-4">Stay Updated</h2>
+            <p className="text-xl text-muted-foreground mb-8">
+              Subscribe to our newsletter for the latest updates and features
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                className="h-12 text-base"
+              />
+              <Button size="default" className="h-12 px-6 text-base">
+                Subscribe
+              </Button>
+            </div>
+          </motion.div>
         </Container>
       </section>
     </div>
