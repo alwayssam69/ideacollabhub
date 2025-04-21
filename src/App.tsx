@@ -37,47 +37,6 @@ import FAQPage from "./pages/FAQPage";
 
 const queryClient = new QueryClient();
 
-function AppContent() {
-  return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/onboarding"
-        element={
-          <PrivateRoute>
-            <Onboarding />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <PrivateRoute>
-            <ProfilePage />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/messages"
-        element={
-          <PrivateRoute>
-            <MessagesPage />
-          </PrivateRoute>
-        }
-      />
-      <Route path="/" element={<Login />} />
-    </Routes>
-  );
-}
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
@@ -107,6 +66,7 @@ const App = () => (
                   </Route>
                   <Route path="/auth/:mode" element={<AuthPage />} />
                   <Route path="/onboarding" element={<OnboardingPage />} />
+                  <Route path="/login" element={<Login />} />
                 </Routes>
                 <Toaster />
                 <Sonner />

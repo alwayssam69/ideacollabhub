@@ -47,9 +47,9 @@ export const useProjects = (
 
         if (error) throw error;
 
-        // Use type assertion to avoid recursive type issues
-        const projectsData = data || [];
-        setProjects(projectsData as Project[]);
+        // Fix deep typing issues with explicit type assertion
+        const projectsData = data ? [...data] : [];
+        setProjects(projectsData as unknown as Project[]);
 
         const userIds = [...new Set(projectsData.map((p) => p.user_id))];
 
@@ -63,9 +63,9 @@ export const useProjects = (
 
           const profilesMap: Record<string, Profile> = {};
           if (profilesData) {
-            // Use type assertion to avoid recursive type issues
+            // Fix deep typing issues with explicit type assertion
             profilesData.forEach((profile) => {
-              profilesMap[profile.id] = profile as Profile;
+              profilesMap[profile.id] = profile as unknown as Profile;
             });
           }
 

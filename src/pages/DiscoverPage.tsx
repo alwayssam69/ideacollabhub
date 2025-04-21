@@ -19,8 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tables } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MapPin } from "lucide-react";
+import { useConnectionRequests } from "@/hooks/useConnectionRequests";
 
-// Empty state for discover page
 const EmptyDiscoverState = () => (
   <div className="text-center py-16 px-6 bg-muted/20 rounded-lg animate-fade-in">
     <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -41,6 +41,7 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showFullProfile, setShowFullProfile] = useState(false);
+  const { sendConnectionRequest, checkConnectionStatus } = useConnectionRequests();
 
   const handleConnectionRequest = async () => {
     if (!user) {
@@ -50,16 +51,12 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('connections')
-        .insert({
-          requester_id: user.id,
-          recipient_id: profile.id,
-          status: 'pending'
-        });
-
-      if (error) throw error;
-      toast.success("Connection request sent!");
+      const result = await sendConnectionRequest(profile.id);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success("Connection request sent!");
+      }
     } catch (error) {
       console.error("Error sending connection request:", error);
       toast.error("Failed to send connection request");
@@ -148,7 +145,6 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
         </Button>
       </CardFooter>
 
-      {/* Full Profile Modal */}
       {showFullProfile && (
         <Dialog open={showFullProfile} onOpenChange={setShowFullProfile}>
           <DialogContent className="max-w-2xl">
@@ -249,9 +245,9 @@ export default function DiscoverPage() {
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [animationDirection, setAnimationDirection] = useState<"left" | "right" | "">("");
+  const { sendConnectionRequest } = useConnectionRequests();
 
   useEffect(() => {
-    // Reset animation after card slide effect
     if (animationDirection) {
       const timer = setTimeout(() => {
         setAnimationDirection("");
@@ -268,27 +264,21 @@ export default function DiscoverPage() {
 
     setActionLoading(true);
     try {
-      // Set animation direction based on action
       setAnimationDirection(action === 'accept' ? 'right' : 'left');
 
-      const { data, error } = await supabase
-        .from('connections')
-        .insert({
-          requester_id: user.id,
-          recipient_id: recipientId,
-          status: action === 'accept' ? 'pending' : 'rejected'
-        })
-        .select();
+      if (action === 'accept') {
+        const result = await sendConnectionRequest(recipientId);
+        if (result.error) {
+          toast.error(result.error);
+          setActionLoading(false);
+          setAnimationDirection("");
+          return;
+        }
+        toast.success('Connection request sent!');
+      } else {
+        toast.info('Profile passed');
+      }
 
-      if (error) throw error;
-
-      toast.success(
-        action === 'accept' 
-          ? 'Connection request sent!' 
-          : 'Profile passed'
-      );
-
-      // Move to next profile
       setTimeout(() => {
         handleNextProfile();
         setActionLoading(false);
@@ -306,7 +296,7 @@ export default function DiscoverPage() {
       setCurrentProfileIndex(currentProfileIndex + 1);
     } else {
       toast.info("You've seen all available profiles!");
-      refetchProfiles(); // Try to get new profiles
+      refetchProfiles();
     }
   };
 
