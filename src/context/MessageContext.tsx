@@ -4,6 +4,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useConnections } from './ConnectionContext';
 import { toast } from 'sonner';
 
+interface MessageProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string;
+}
+
 interface DatabaseMessage {
   id: string;
   sender_id: string;
@@ -11,16 +17,8 @@ interface DatabaseMessage {
   content: string;
   created_at: string;
   read: boolean;
-  sender: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  } | null;
-  recipient: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  } | null;
+  sender: MessageProfile | null;
+  recipient: MessageProfile | null;
 }
 
 interface Message {
@@ -30,16 +28,8 @@ interface Message {
   content: string;
   created_at: string;
   read: boolean;
-  sender: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  };
-  recipient: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  };
+  sender: MessageProfile;
+  recipient: MessageProfile;
 }
 
 interface Conversation {
@@ -138,14 +128,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase
         .from('messages')
         .select(`
-          id,
-          sender_id,
-          recipient_id,
-          content,
-          created_at,
-          read,
-          sender:profiles!sender_id(id, full_name, avatar_url),
-          recipient:profiles!recipient_id(id, full_name, avatar_url)
+          id, sender_id, recipient_id, content, created_at, read,
+          profiles!sender_id(id, full_name, avatar_url),
+          profiles!recipient_id(id, full_name, avatar_url)
         `)
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: true });
@@ -154,7 +139,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
       const conversationsMap = new Map<string, Conversation>();
 
-      data.forEach((message: DatabaseMessage) => {
+      const typedData = data.map(msg => ({
+        ...msg,
+        sender: msg.profiles as unknown as MessageProfile,
+        recipient: msg.profiles_2 as unknown as MessageProfile
+      })) as DatabaseMessage[];
+
+      typedData.forEach((message: DatabaseMessage) => {
         if (!message.sender || !message.recipient) return; // Skip messages with missing sender/recipient data
         
         const otherUserId =
@@ -165,7 +156,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           unreadCount: 0,
         };
 
-        conversation.messages.push(message);
+        conversation.messages.push(message as Message);
         if (message.recipient_id === user.id && !message.read) {
           conversation.unreadCount++;
         }
@@ -195,7 +186,6 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      // Update local state
       const newMessage: Message = {
         id: Date.now().toString(), // Temporary ID
         sender_id: user.id,
@@ -298,4 +288,4 @@ export function useMessages() {
     throw new Error('useMessages must be used within a MessageProvider');
   }
   return context;
-} 
+}

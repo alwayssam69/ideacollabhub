@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+interface ConnectionProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string;
+}
+
 interface Connection {
   id: string;
   requester_id: string;
@@ -10,16 +16,8 @@ interface Connection {
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   updated_at: string;
-  requester: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  };
-  recipient: {
-    id: string;
-    full_name: string;
-    avatar_url: string;
-  };
+  requester: ConnectionProfile;
+  recipient: ConnectionProfile;
 }
 
 interface ConnectionContextType {
@@ -84,20 +82,27 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       const { data, error } = await supabase
         .from('connections')
         .select(`
-          *,
-          requester:profiles!requester_id(*),
-          recipient:profiles!recipient_id(*)
+          id, requester_id, recipient_id, status, created_at, updated_at,
+          profiles!requester_id(id, full_name, avatar_url),
+          profiles!recipient_id(id, full_name, avatar_url)
         `)
         .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
 
       if (error) throw error;
 
-      const acceptedConnections = data.filter(
+      const formattedConnections = data.map(conn => ({
+        ...conn,
+        requester: conn.profiles as unknown as ConnectionProfile,
+        recipient: conn.profiles_2 as unknown as ConnectionProfile,
+      })) as Connection[];
+
+      const acceptedConnections = formattedConnections.filter(
         (conn) => conn.status === 'accepted'
-      ) as Connection[];
-      const pending = data.filter(
+      );
+      
+      const pending = formattedConnections.filter(
         (conn) => conn.status === 'pending' && conn.recipient_id === user.id
-      ) as Connection[];
+      );
 
       setConnections(acceptedConnections);
       setPendingRequests(pending);
@@ -215,4 +220,4 @@ export function useConnections() {
     throw new Error('useConnections must be used within a ConnectionProvider');
   }
   return context;
-} 
+}

@@ -54,7 +54,7 @@ export default function OnboardingPage() {
   const [progress, setProgress] = useState(0);
   const [formData, setFormData] = useState({
     full_name: '',
-    role: '',
+    title: '', // Changed from 'role' to 'title' to match the profile schema
     skills: [] as string[],
     looking_for: [] as string[],
     location: '',
@@ -81,7 +81,7 @@ export default function OnboardingPage() {
         if (data) {
           setFormData({
             full_name: data.full_name || '',
-            role: data.role || '',
+            title: data.title || '', // Changed from 'role' to 'title'
             skills: data.skills || [],
             looking_for: data.looking_for || [],
             location: data.location || '',
@@ -154,12 +154,12 @@ export default function OnboardingPage() {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="title">Role</Label>
               <MultiSelect
-                id="role"
+                id="title"
                 options={ROLES}
-                value={formData.role ? [formData.role] : []}
-                onChange={(values) => handleMultiSelectChange('role', values)}
+                value={formData.title ? [formData.title] : []}
+                onChange={(values) => handleMultiSelectChange('title', values)}
                 placeholder="Select your role"
                 singleSelect
                 required
