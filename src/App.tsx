@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,14 +8,10 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from '@/context/AuthContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { MessageProvider } from '@/context/MessageContext';
-import { useOnboardingCheck } from '@/hooks/useOnboardingCheck';
 import PrivateRoute from '@/components/PrivateRoute';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import Onboarding from '@/pages/Onboarding';
-import Profile from '@/pages/Profile';
-import Messages from '@/pages/Messages';
-import Matches from '@/pages/Matches';
 
 import MainLayout from "./components/layout/MainLayout";
 import Index from "./pages/Index";
@@ -31,7 +28,7 @@ import NotificationsPage from "./pages/NotificationsPage";
 import PendingRequestsPage from "./pages/PendingRequestsPage";
 import ExplorePostsPage from "./pages/ExplorePostsPage";
 import SettingsPage from "./pages/SettingsPage";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AboutPage from "./pages/AboutPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
@@ -41,8 +38,6 @@ import FAQPage from "./pages/FAQPage";
 const queryClient = new QueryClient();
 
 function AppContent() {
-  useOnboardingCheck();
-
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
@@ -66,7 +61,7 @@ function AppContent() {
         path="/profile"
         element={
           <PrivateRoute>
-            <Profile />
+            <ProfilePage />
           </PrivateRoute>
         }
       />
@@ -74,15 +69,7 @@ function AppContent() {
         path="/messages"
         element={
           <PrivateRoute>
-            <Messages />
-          </PrivateRoute>
-        }
-      />
-      <Route
-        path="/matches"
-        element={
-          <PrivateRoute>
-            <Matches />
+            <MessagesPage />
           </PrivateRoute>
         }
       />
@@ -119,7 +106,7 @@ const App = () => (
                     <Route path="faq" element={<FAQPage />} />
                   </Route>
                   <Route path="/auth/:mode" element={<AuthPage />} />
-                  <Route path="/" element={<Login />} />
+                  <Route path="/onboarding" element={<OnboardingPage />} />
                 </Routes>
                 <Toaster />
                 <Sonner />
