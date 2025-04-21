@@ -2,7 +2,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
-import { Tables } from '@/integrations/supabase/types';
 
 // Explicitly define the Project type with all fields that might be used
 export type Project = {
@@ -62,7 +61,7 @@ export function useProjects(
     }
 
     // Fetch creators for these projects
-    const userIds = [...new Set(data.map(project => project.user_id))];
+    const userIds = [...new Set((data as any[]).map(project => project.user_id))];
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
@@ -71,7 +70,7 @@ export function useProjects(
       
       const creatorsMap: Record<string, Profile> = {};
       if (profiles) {
-        profiles.forEach(profile => {
+        profiles.forEach((profile: any) => {
           creatorsMap[profile.id] = {
             id: profile.id,
             full_name: profile.full_name,
@@ -84,8 +83,8 @@ export function useProjects(
       }
     }
 
-    // Cast the data to Project[] to avoid type issues
-    return data as Project[];
+    // Return the data with explicit casting to avoid type instantiation issues
+    return data as unknown as Project[];
   };
 
   const { data: projects = [], isLoading, error } = useQuery({

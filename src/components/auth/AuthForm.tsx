@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 export function AuthForm() {
-  const { mode = "signin" } = useParams<{ mode: "signin" | "signup" }>();
+  const { mode = "signin" } = useParams<{ mode?: "signin" | "signup" }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -77,10 +77,10 @@ export function AuthForm() {
     <div className="w-full max-w-md space-y-8">
       <div className="text-center">
         <h2 className="text-3xl font-bold tracking-tight">
-          {mode === 'login' ? 'Welcome back' : 'Create an account'}
+          {mode === 'signin' ? 'Welcome back' : 'Create an account'}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          {mode === 'login'
+          {mode === 'signin'
             ? 'Enter your credentials to sign in'
             : 'Enter your details to get started'}
         </p>
@@ -106,7 +106,7 @@ export function AuthForm() {
             <Input
               id="password"
               type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -118,10 +118,10 @@ export function AuthForm() {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => navigate(mode === 'login' ? '/auth/signup' : '/auth/signin')}
+            onClick={() => navigate(mode === 'signin' ? '/auth/signup' : '/auth/signin')}
             className="text-sm font-medium text-primary hover:underline"
           >
-            {mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
+            {mode === 'signin' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
           </button>
         </div>
 
@@ -131,7 +131,7 @@ export function AuthForm() {
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Please wait...
             </>
-          ) : mode === 'login' ? (
+          ) : mode === 'signin' ? (
             'Sign in'
           ) : (
             'Sign up'
