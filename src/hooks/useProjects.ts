@@ -41,7 +41,8 @@ export function useProjects(
   const [filter, setFilter] = useState<string | null>(null);
   const [creators, setCreators] = useState<Record<string, Profile>>({});
 
-  const fetchProjects = async (): Promise<Project[]> => {
+  // Simplified fetchProjects to avoid type instantiation issues
+  const fetchProjects = async () => {
     let query = supabase.from('projects').select('*');
 
     if (filter) {
@@ -61,7 +62,7 @@ export function useProjects(
     }
 
     // Fetch creators for these projects
-    const userIds = [...new Set((data as any[]).map(project => project.user_id))];
+    const userIds = [...new Set((data || []).map((project: any) => project.user_id))];
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
         .from('profiles')
@@ -83,8 +84,8 @@ export function useProjects(
       }
     }
 
-    // Return the data with explicit casting to avoid type instantiation issues
-    return data as unknown as Project[];
+    // Use type assertion to avoid deep instantiation issues
+    return (data || []) as Project[];
   };
 
   const { data: projects = [], isLoading, error } = useQuery({

@@ -2,33 +2,43 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { toast } from 'sonner';
 
 export function useOnboardingCheck() {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    async function checkOnboarding() {
-      if (!user) return;
+    const checkOnboardingStatus = async () => {
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        return; // User is not logged in
+      }
 
       try {
-        const { data, error } = await supabase
+        // Check if onboarding is completed
+        const { data: profile, error } = await supabase
           .from('profiles')
           .select('onboarding_completed')
-          .eq('id', user.id)
-          .single();
+          .eq('id', session.user.id)
+          .maybeSingle();
 
-        if (error) throw error;
-        
-        if (data && !data.onboarding_completed) {
+        if (error) {
+          console.error('Error checking onboarding status:', error);
+          return;
+        }
+
+        // If profile exists but onboarding not completed, redirect to onboarding
+        if (profile && profile.onboarding_completed === false) {
           navigate('/onboarding');
         }
       } catch (error) {
-        console.error('Error checking onboarding status:', error);
+        console.error('Error in onboarding check:', error);
+        toast.error('Failed to check onboarding status');
       }
-    }
+    };
 
-    checkOnboarding();
-  }, [user, navigate]);
+    checkOnboardingStatus();
+  }, [navigate]);
 }
