@@ -42,6 +42,51 @@ interface ProjectWithCreator extends Project {
   creator: Profile;
 }
 
+interface SupabaseProjectResponse extends Project {
+  creator: Profile | null;
+}
+
+// Type guard to check if the response is valid
+function isValidProjectResponse(response: unknown): response is SupabaseProjectResponse {
+  if (!response || typeof response !== 'object') return false;
+  
+  const project = response as Record<string, unknown>;
+  
+  // Check required project fields
+  if (!('id' in project) || !('title' in project) || !('description' in project)) {
+    return false;
+  }
+  
+  // Check creator field
+  if (!('creator' in project)) return false;
+  
+  const creator = project.creator;
+  if (creator === null) return true;
+  
+  if (typeof creator !== 'object' || !creator) return false;
+  
+  const creatorObj = creator as Record<string, unknown>;
+  return (
+    'id' in creatorObj &&
+    'full_name' in creatorObj &&
+    'avatar_url' in creatorObj
+  );
+}
+
+// Helper function to validate and transform the response
+function transformProjectResponse(project: unknown): ProjectWithCreator {
+  if (!isValidProjectResponse(project)) {
+    throw new Error("Invalid project response");
+  }
+  if (!project.creator) {
+    throw new Error("Project creator not found");
+  }
+  return {
+    ...project,
+    creator: project.creator
+  };
+}
+
 export default function ProjectsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -76,8 +121,12 @@ export default function ProjectsPage() {
         .order("created_at", { ascending: false });
 
       if (projectsError) throw projectsError;
+      if (!projectsData) throw new Error("No projects found");
 
-      setProjects(projectsData as ProjectWithCreator[]);
+      const typedProjects = projectsData
+        .map(project => transformProjectResponse(project));
+
+      setProjects(typedProjects);
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to load projects");
@@ -116,8 +165,10 @@ export default function ProjectsPage() {
         .single();
 
       if (error) throw error;
+      if (!project) throw new Error("Project creation failed");
 
-      setProjects(prev => [project as ProjectWithCreator, ...prev]);
+      const projectWithCreator = transformProjectResponse(project);
+      setProjects(prev => [projectWithCreator, ...prev]);
       setDialogOpen(false);
       toast.success("Project created successfully!");
 
