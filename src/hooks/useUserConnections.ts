@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +11,7 @@ export type Connection = {
   status: 'pending' | 'accepted' | 'rejected';
   created_at: string;
   updated_at: string;
-  profile: Tables<'profiles'>;
+  profile: Tables<'profiles'> | { [key: string]: any };
 };
 
 export function useUserConnections() {
@@ -52,16 +51,28 @@ export function useUserConnections() {
       
       if (receivedError) throw receivedError;
       
-      // Group connections by status
+      // Group connections by status with safe type handling
+      const processedSentConnections = sentConnections?.map(conn => ({
+        ...conn,
+        profile: conn.profile || { id: conn.recipient_id }
+      })) || [];
+      
+      const processedReceivedConnections = receivedConnections?.map(conn => ({
+        ...conn,
+        profile: conn.profile || { id: conn.requester_id }
+      })) || [];
+      
       const accepted = [
-        ...(sentConnections || []).filter(conn => conn.status === 'accepted'),
-        ...(receivedConnections || []).filter(conn => conn.status === 'accepted')
-      ];
+        ...processedSentConnections.filter(conn => conn.status === 'accepted'),
+        ...processedReceivedConnections.filter(conn => conn.status === 'accepted')
+      ] as Connection[];
       
-      const pending = receivedConnections?.filter(conn => conn.status === 'pending') || [];
+      const pending = processedReceivedConnections.filter(
+        conn => conn.status === 'pending'
+      ) as Connection[];
       
-      setConnections(accepted as Connection[]);
-      setPendingRequests(pending as Connection[]);
+      setConnections(accepted);
+      setPendingRequests(pending);
       setError(null);
       
     } catch (err) {

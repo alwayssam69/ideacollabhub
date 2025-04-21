@@ -28,7 +28,6 @@ export const useProjects = (
       try {
         setLoading(true);
 
-        // Use explicit type annotation to avoid deep instantiation issues
         let query = supabase.from("projects").select();
 
         if (selectedCategory) {
@@ -48,8 +47,8 @@ export const useProjects = (
 
         if (error) throw error;
 
-        // Explicit cast to avoid type issues
-        const projectsData = rawProjects as Project[] || [];
+        // Use a simpler approach to avoid deep type instantiation
+        const projectsData = (rawProjects || []) as Project[];
         setProjects(projectsData);
 
         const userIds = [...new Set(projectsData.map((p) => p.user_id))];
@@ -62,12 +61,11 @@ export const useProjects = (
 
           if (profileError) throw profileError;
 
-          // Explicit cast to avoid type issues
-          const profilesData = rawProfiles as Profile[] || [];
-          
           // Create a map of user IDs to profiles
           const profilesMap: Record<string, Profile> = {};
-          profilesData.forEach((profile) => {
+          const profilesArray = (rawProfiles || []) as Profile[];
+          
+          profilesArray.forEach((profile) => {
             profilesMap[profile.id] = profile;
           });
 

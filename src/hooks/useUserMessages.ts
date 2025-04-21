@@ -18,7 +18,7 @@ export type Message = {
 };
 
 export type Conversation = {
-  profile: Tables<'profiles'>;
+  profile: Tables<'profiles'> | { [key: string]: any }; // Allow fallback
   lastMessage: Message | null;
   unreadCount: number;
 };
@@ -39,91 +39,66 @@ export function useUserMessages() {
     try {
       setLoading(true);
       
-      // Get all users the current user has messaged or received messages from
-      const { data: messageUsers, error: messageError } = await supabase
-        .rpc('get_message_participants', { user_id: user.id });
-      
-      if (messageError) {
-        console.error("Error fetching message participants:", messageError);
-        // Fallback method if RPC doesn't exist
-        const { data: sentMessages } = await supabase
-          .from('messages')
-          .select('recipient_id')
-          .eq('sender_id', user.id)
-          .order('created_at', { ascending: false });
-          
-        const { data: receivedMessages } = await supabase
-          .from('messages')
-          .select('sender_id')
-          .eq('recipient_id', user.id)
-          .order('created_at', { ascending: false });
-          
-        const userIds = new Set<string>();
+      // Get all users the current user has messaged or received messages from - first try standard query
+      const { data: sentMessages } = await supabase
+        .from('messages')
+        .select('recipient_id')
+        .eq('sender_id', user.id)
+        .order('created_at', { ascending: false });
         
-        sentMessages?.forEach(msg => userIds.add(msg.recipient_id));
-        receivedMessages?.forEach(msg => userIds.add(msg.sender_id));
+      const { data: receivedMessages } = await supabase
+        .from('messages')
+        .select('sender_id')
+        .eq('recipient_id', user.id)
+        .order('created_at', { ascending: false });
         
-        // Fetch profiles for these users
-        if (userIds.size > 0) {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('id', Array.from(userIds));
-            
-          if (!profiles) return;
-          
-          const conversationsArray: Conversation[] = [];
-          
-          for (const profile of profiles) {
-            // Get last message
-            const { data: lastMessageData } = await supabase
-              .from('messages')
-              .select('*')
-              .or(`and(sender_id.eq.${user.id},recipient_id.eq.${profile.id}),and(sender_id.eq.${profile.id},recipient_id.eq.${user.id})`)
-              .order('created_at', { ascending: false })
-              .limit(1);
-              
-            // Get unread count
-            const { count } = await supabase
-              .from('messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('sender_id', profile.id)
-              .eq('recipient_id', user.id)
-              .eq('read', false);
-              
-            conversationsArray.push({
-              profile,
-              lastMessage: lastMessageData && lastMessageData.length > 0 ? lastMessageData[0] as Message : null,
-              unreadCount: count || 0
-            });
-          }
-          
-          // Sort by most recent message
-          conversationsArray.sort((a, b) => {
-            const dateA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-            const dateB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-            return dateB - dateA;
-          });
-          
-          setConversations(conversationsArray);
-          setLoading(false);
-          return;
-        }
-      }
+      const userIds = new Set<string>();
       
-      // If RPC call was successful, process the data
-      if (messageUsers) {
+      sentMessages?.forEach(msg => userIds.add(msg.recipient_id));
+      receivedMessages?.forEach(msg => userIds.add(msg.sender_id));
+      
+      // Fetch profiles for these users
+      if (userIds.size > 0) {
+        const userIdArray = Array.from(userIds);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('id', userIdArray);
+          
+        if (!profiles) return;
+        
         const conversationsArray: Conversation[] = [];
         
-        for (const userData of messageUsers) {
-          const { profile, last_message, unread_count } = userData;
-          
+        for (const profile of profiles) {
+          // Get last message
+          const { data: lastMessageData } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`and(sender_id.eq.${user.id},recipient_id.eq.${profile.id}),and(sender_id.eq.${profile.id},recipient_id.eq.${user.id})`)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          // Get unread count
+          const { count } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('sender_id', profile.id)
+            .eq('recipient_id', user.id)
+            .eq('read', false);
+            
           conversationsArray.push({
-            profile: profile as Tables<'profiles'>,
-            lastMessage: last_message as Message | null,
-            unreadCount: unread_count as number
+            profile,
+            lastMessage: lastMessageData && lastMessageData.length > 0 ? lastMessageData[0] as Message : null,
+            unreadCount: count || 0
           });
         }
+        
+        // Sort by most recent message
+        conversationsArray.sort((a, b) => {
+          const dateA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
+          const dateB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
         
         setConversations(conversationsArray);
       }
@@ -135,7 +110,7 @@ export function useUserMessages() {
       setLoading(false);
     }
   };
-  
+
   // Fetch messages for a specific conversation
   const fetchMessages = async (recipientId: string) => {
     if (!user) return;
@@ -242,7 +217,7 @@ export function useUserMessages() {
       setLoadingMessages(false);
     }
   };
-  
+
   // Send a message
   const sendMessage = async (recipientId: string, content: string) => {
     if (!user || !content.trim()) return null;
@@ -268,7 +243,7 @@ export function useUserMessages() {
       return null;
     }
   };
-  
+
   // Listen for new messages
   useEffect(() => {
     if (!user) return;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -51,10 +52,12 @@ export function ChatInterface({ userId, recipientId }: { userId: string; recipie
         if (error) throw error;
         
         // Transform the data with proper type casting
-        const transformedMessages = data.map(msg => ({
-          ...msg,
-          sender_profile: msg.sender || { full_name: 'Unknown', avatar_url: '' }
-        })) as Message[];
+        const transformedMessages = data.map(msg => {
+          return {
+            ...msg,
+            sender_profile: msg.sender || { full_name: 'Unknown', avatar_url: '' }
+          };
+        }) as unknown as Message[];
         
         setMessages(transformedMessages);
       } catch (error) {
@@ -111,34 +114,43 @@ export function ChatInterface({ userId, recipientId }: { userId: string; recipie
     if (!content.trim()) return;
 
     try {
-      const { data: newMessage, error } = await supabase
+      setSending(true);
+      const { error } = await supabase
         .from('messages')
         .insert({
           sender_id: userId,
           recipient_id: recipientId,
           content,
           read: false
-        })
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(full_name, avatar_url)
-        `)
-        .single();
+        });
 
       if (error) throw error;
 
-      if (newMessage) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            ...newMessage,
-            sender_profile: newMessage.sender
-          }
-        ]);
-      }
+      // Fetch the profile information for the new message
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', userId)
+        .single();
+
+      // Add the message directly to the state
+      const newMessage: Message = {
+        id: crypto.randomUUID(), // temporary ID until refresh
+        sender_id: userId,
+        recipient_id: recipientId,
+        content,
+        created_at: new Date().toISOString(),
+        read: false,
+        sender_profile: profileData || { full_name: 'Unknown', avatar_url: '' }
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Failed to send message');
+    } finally {
+      setSending(false);
     }
   };
 

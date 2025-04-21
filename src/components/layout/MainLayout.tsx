@@ -16,7 +16,7 @@ export function MainLayout() {
         <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-background/90">
           <Header />
           <div className="flex-1 flex container">
-            <SideNav className="hidden md:block w-48 shrink-0 -ml-4" />
+            <SideNav className="w-48 shrink-0 -ml-4 hidden md:block" />
             <main className="flex-1 py-6">
               <Outlet />
             </main>

@@ -41,19 +41,36 @@ export const useConnections = (userId: string) => {
 
         if (connectionsError) throw connectionsError;
 
-        // Cast to proper type
-        const typedConnections = connectionsData as unknown as Connection[];
+        // Handle the data with proper type safety
+        if (connectionsData) {
+          // Process the data to ensure correct types
+          const processedData = connectionsData.map(conn => {
+            return {
+              ...conn,
+              requester_profile: conn.requester_profile || { 
+                full_name: 'Unknown',
+                title: '',
+                avatar_url: ''
+              },
+              recipient_profile: conn.recipient_profile || { 
+                full_name: 'Unknown',
+                title: '',
+                avatar_url: ''
+              }
+            };
+          }) as Connection[];
 
-        const acceptedConnections = typedConnections.filter(
-          (conn) => conn.status === 'accepted'
-        );
-        
-        const pending = typedConnections.filter(
-          (conn) => conn.status === 'pending' && conn.recipient_id === userId
-        );
+          const acceptedConnections = processedData.filter(
+            (conn) => conn.status === 'accepted'
+          );
+          
+          const pending = processedData.filter(
+            (conn) => conn.status === 'pending' && conn.recipient_id === userId
+          );
 
-        setConnections(acceptedConnections);
-        setPendingRequests(pending);
+          setConnections(acceptedConnections);
+          setPendingRequests(pending);
+        }
       } catch (error) {
         console.error('Error fetching connections:', error);
         toast.error('Failed to load connections');
@@ -87,23 +104,52 @@ export const useConnections = (userId: string) => {
                 .eq('id', newConnection.requester_id)
                 .single();
 
-              setPendingRequests((prev) => [
-                {
+              if (requesterProfile) {
+                const updatedConnection = {
                   ...newConnection,
                   requester_profile: requesterProfile,
-                },
-                ...prev,
-              ]);
-
-              toast.info(`New connection request from ${requesterProfile?.full_name}`);
+                  recipient_profile: { full_name: '', title: '', avatar_url: '' } // Default empty values
+                } as Connection;
+                
+                setPendingRequests(prev => [updatedConnection, ...prev]);
+                toast.info(`New connection request from ${requesterProfile?.full_name}`);
+              }
             }
           } else if (eventType === 'UPDATE') {
             // Connection status update
             if (newConnection.status === 'accepted') {
-              setPendingRequests((prev) =>
+              setPendingRequests(prev =>
                 prev.filter((req) => req.id !== newConnection.id)
               );
-              setConnections((prev) => [newConnection, ...prev]);
+              
+              // Find full connection data
+              const { data: fullConnection } = await supabase
+                .from('connections')
+                .select(`
+                  *,
+                  requester_profile:profiles!connections_requester_id_fkey(full_name, title, avatar_url),
+                  recipient_profile:profiles!connections_recipient_id_fkey(full_name, title, avatar_url)
+                `)
+                .eq('id', newConnection.id)
+                .single();
+                
+              if (fullConnection) {
+                const processedConnection = {
+                  ...fullConnection,
+                  requester_profile: fullConnection.requester_profile || { 
+                    full_name: 'Unknown',
+                    title: '',
+                    avatar_url: ''
+                  },
+                  recipient_profile: fullConnection.recipient_profile || { 
+                    full_name: 'Unknown',
+                    title: '',
+                    avatar_url: ''
+                  }
+                } as Connection;
+                
+                setConnections(prev => [processedConnection, ...prev]);
+              }
 
               const otherUserId =
                 newConnection.requester_id === userId
@@ -120,7 +166,7 @@ export const useConnections = (userId: string) => {
                 `${otherProfile?.full_name} accepted your connection request`
               );
             } else if (newConnection.status === 'rejected') {
-              setPendingRequests((prev) =>
+              setPendingRequests(prev =>
                 prev.filter((req) => req.id !== newConnection.id)
               );
             }
