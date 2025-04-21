@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,7 +24,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/router";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -94,33 +94,50 @@ const MEETING_PREFERENCE_OPTIONS = [
 
 // Step schemas
 const professionalInfoSchema = z.object({
+  full_name: z.string().min(2, "Full name is required"),
+  title: z.string().min(2, "Professional title is required"),
   industry: z.string().min(1, "Industry is required"),
   skills: z.array(z.string()).min(1, "Please select at least one skill"),
   purposes: z.array(z.string()).min(1, "Please select at least one purpose"),
   availability: z.string().min(1, "Availability is required"),
   meetingPreference: z.string().min(1, "Meeting preference is required"),
   bio: z.string().min(10, "Bio should be at least 10 characters"),
-  profilePhoto: z.instanceof(File).optional(),
+  location: z.string().min(1, "Location is required"),
+  stage: z.string().min(1, "Current stage is required"),
+  profilePhoto: z.any().optional(),
 });
 
 export default function OnboardingPage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+  const { user, onboardingCompleted } = useAuth();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedIndustry, setSelectedIndustry] = useState("");
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
+  // Redirect if user is not logged in or has completed onboarding
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/login');
+    } else if (onboardingCompleted) {
+      router.push('/dashboard');
+    }
+  }, [user, onboardingCompleted, router]);
+
   const form = useForm<z.infer<typeof professionalInfoSchema>>({
     resolver: zodResolver(professionalInfoSchema),
     defaultValues: {
-      industry: "",
+      full_name: user?.user_metadata?.full_name || '',
+      title: user?.user_metadata?.title || '',
+      location: user?.user_metadata?.location || '',
+      stage: user?.user_metadata?.stage || '',
+      bio: '',
       skills: [],
       purposes: [],
-      availability: "",
-      meetingPreference: "",
-      bio: "",
-      profilePhoto: undefined,
+      availability: '',
+      meetingPreference: '',
+      profilePhoto: null,
     },
   });
 
@@ -142,77 +159,66 @@ export default function OnboardingPage() {
     }
   };
 
-  const uploadProfilePhoto = async (file: File, userId: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}-${Math.random()}.${fileExt}`;
-    const filePath = `profile-photos/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('profile-photos')
-      .upload(filePath, file);
-
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('profile-photos')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
   const onSubmit = async (data: z.infer<typeof professionalInfoSchema>) => {
-    setIsSubmitting(true);
-
     try {
-      if (!user) {
-        toast.error("User not authenticated");
-        return;
-      }
+      setIsSubmitting(true);
+      let profilePhotoUrl = '';
 
-      let avatarUrl = "";
+      // Handle profile photo upload if provided
       if (data.profilePhoto) {
-        avatarUrl = await uploadProfilePhoto(data.profilePhoto, user.id);
+        const file = data.profilePhoto;
+        const fileExt = file.name.split('.').pop();
+        const filePath = `${user!.id}/profile-photo.${fileExt}`;
+
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('profile-photos')
+          .upload(filePath, file, {
+            upsert: true,
+            onUploadProgress: (progress) => {
+              setUploadProgress((progress.loaded / progress.total) * 100);
+            },
+          });
+
+        if (uploadError) {
+          throw new Error('Error uploading profile photo');
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('profile-photos')
+          .getPublicUrl(filePath);
+
+        profilePhotoUrl = publicUrl;
       }
 
-      const profileData = {
-        id: user.id,
-        industry: data.industry,
-        skills: data.skills,
-        looking_for: data.purposes,
-        availability: data.availability,
-        meeting_preference: data.meetingPreference,
-        bio: data.bio,
-        onboarding_completed: true,
-        updated_at: new Date().toISOString(),
-        preferred_industries: [data.industry],
-        preferred_project_types: data.purposes,
-        motivation: data.bio,
-        avatar_url: avatarUrl
-      };
-
-      const { error } = await supabase
+      // Update profile in database
+      const { error: updateError } = await supabase
         .from('profiles')
-        .update(profileData)
-        .eq('id', user.id);
+        .upsert({
+          id: user!.id,
+          full_name: data.full_name,
+          title: data.title,
+          location: data.location,
+          stage: data.stage,
+          bio: data.bio,
+          skills: data.skills,
+          looking_for: data.purposes,
+          availability: data.availability,
+          meeting_preference: data.meetingPreference,
+          avatar_url: profilePhotoUrl || null,
+          onboarding_completed: true,
+          updated_at: new Date().toISOString(),
+        });
 
-      if (error) {
-        console.error('Detailed error:', error);
-        throw error;
-      }
+      if (updateError) throw updateError;
 
-      toast.success("Profile completed successfully!");
-      navigate("/dashboard");
+      toast.success('Profile updated successfully!');
+      router.push('/dashboard');
     } catch (error) {
-      console.error("Error saving profile:", error);
-      toast.error(
-        error instanceof Error 
-          ? `Failed to save profile: ${error.message}`
-          : "Failed to save profile. Please try again."
-      );
+      console.error('Error updating profile:', error);
+      toast.error('Error updating profile. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
