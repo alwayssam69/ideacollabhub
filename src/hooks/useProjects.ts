@@ -2,28 +2,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Tables } from "@/integrations/supabase/types";
 
-export type Project = {
-  id: string;
-  title: string;
-  description: string;
-  user_id: string;
-  duration: string | null;
-  looking_for: string;
-  required_skills: string[] | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Profile = {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  title: string | null;
-  bio: string | null;
-  skills: string[] | null;
-  [key: string]: any; // To allow for other potential fields
-};
+export type Project = Tables<'projects'>;
+export type Profile = Tables<'profiles'>;
 
 interface UseProjectsResult {
   projects: Project[];

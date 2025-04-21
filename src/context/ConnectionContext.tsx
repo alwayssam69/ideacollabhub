@@ -1,7 +1,9 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { Tables } from '@/integrations/supabase/types';
 
 interface ConnectionProfile {
   id: string;
@@ -79,22 +81,34 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // First fetch the requester data
+      const { data: requesterData, error: requesterError } = await supabase
         .from('connections')
         .select(`
-          id, requester_id, recipient_id, status, created_at, updated_at,
-          profiles!requester_id(id, full_name, avatar_url),
-          profiles!recipient_id(id, full_name, avatar_url)
+          *,
+          requester:profiles!requester_id(id, full_name, avatar_url),
+          recipient:profiles!recipient_id(id, full_name, avatar_url)
         `)
         .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
 
-      if (error) throw error;
+      if (requesterError) throw requesterError;
+      
+      if (!requesterData) {
+        setConnections([]);
+        setPendingRequests([]);
+        setLoading(false);
+        return;
+      }
 
-      const formattedConnections = data.map(conn => ({
-        ...conn,
-        requester: conn.profiles as unknown as ConnectionProfile,
-        recipient: conn.profiles_2 as unknown as ConnectionProfile,
-      })) as Connection[];
+      // Process the data and ensure it matches the Connection interface
+      const formattedConnections: Connection[] = requesterData.map(conn => {
+        return {
+          ...conn,
+          requester: conn.requester as unknown as ConnectionProfile,
+          recipient: conn.recipient as unknown as ConnectionProfile
+        };
+      });
 
       const acceptedConnections = formattedConnections.filter(
         (conn) => conn.status === 'accepted'

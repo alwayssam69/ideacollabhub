@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -129,8 +130,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
         .from('messages')
         .select(`
           id, sender_id, recipient_id, content, created_at, read,
-          profiles!sender_id(id, full_name, avatar_url),
-          profiles!recipient_id(id, full_name, avatar_url)
+          sender:profiles!sender_id(id, full_name, avatar_url),
+          recipient:profiles!recipient_id(id, full_name, avatar_url)
         `)
         .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: true });
@@ -139,13 +140,20 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
       const conversationsMap = new Map<string, Conversation>();
 
-      const typedData = data.map(msg => ({
-        ...msg,
-        sender: msg.profiles as unknown as MessageProfile,
-        recipient: msg.profiles_2 as unknown as MessageProfile
-      })) as DatabaseMessage[];
+      if (!data) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
 
-      typedData.forEach((message: DatabaseMessage) => {
+      // Process the data and ensure it matches the Message interface
+      const typedData: Message[] = data.map(msg => ({
+        ...msg,
+        sender: msg.sender as unknown as MessageProfile,
+        recipient: msg.recipient as unknown as MessageProfile
+      }));
+
+      typedData.forEach((message: Message) => {
         if (!message.sender || !message.recipient) return; // Skip messages with missing sender/recipient data
         
         const otherUserId =
@@ -156,7 +164,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           unreadCount: 0,
         };
 
-        conversation.messages.push(message as Message);
+        conversation.messages.push(message);
         if (message.recipient_id === user.id && !message.read) {
           conversation.unreadCount++;
         }

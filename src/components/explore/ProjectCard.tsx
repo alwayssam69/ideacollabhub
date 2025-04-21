@@ -30,14 +30,15 @@ import {
   UserPlus,
   X
 } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
+import { Profile } from "@/hooks/useProjects";
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Tables } from "@/integrations/supabase/types";
 
 type ProjectCardProps = {
   project: Tables<'projects'>;
-  creator: Tables<'profiles'>;
+  creator: Profile;
 };
 
 export function ProjectCard({ project, creator }: ProjectCardProps) {

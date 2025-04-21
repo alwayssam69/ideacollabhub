@@ -1,236 +1,266 @@
-
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Import the necessary components and hooks
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import { useProfile } from '@/hooks/useProfile';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { MultiSelect } from '@/components/ui/multi-select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
-const ROLES = [
-  { value: 'founder', label: 'Founder' },
-  { value: 'developer', label: 'Developer' },
-  { value: 'designer', label: 'Designer' },
-  { value: 'marketer', label: 'Marketer' },
-  { value: 'product_manager', label: 'Product Manager' },
-  { value: 'investor', label: 'Investor' },
-  { value: 'mentor', label: 'Mentor' },
-  { value: 'other', label: 'Other' },
-];
-
-const LOOKING_FOR = [
-  { value: 'co_founder', label: 'Co-founder' },
-  { value: 'developer', label: 'Developer' },
-  { value: 'designer', label: 'Designer' },
-  { value: 'mentor', label: 'Mentor' },
-  { value: 'investor', label: 'Investor' },
-  { value: 'advisor', label: 'Advisor' },
-  { value: 'team_member', label: 'Team Member' },
-  { value: 'collaborator', label: 'Collaborator' },
-];
-
-const SKILLS = [
-  { value: 'react', label: 'React' },
-  { value: 'node', label: 'Node.js' },
-  { value: 'python', label: 'Python' },
-  { value: 'ui_ux', label: 'UI/UX Design' },
-  { value: 'product_management', label: 'Product Management' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'sales', label: 'Sales' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'ai_ml', label: 'AI/ML' },
-  { value: 'blockchain', label: 'Blockchain' },
-];
+// Define a type for the profile data
+type OnboardingProfileData = {
+  full_name: string;
+  title: string | null; // this is used instead of role
+  skills: string[] | null;
+  looking_for: string[] | null;
+  location: string | null;
+  bio: string | null;
+  onboarding_completed: boolean;
+};
 
 export default function OnboardingPage() {
   const { user } = useAuth();
+  const { profile, updateProfile, loading: profileLoading } = useProfile();
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [progress, setProgress] = useState(0);
-  const [formData, setFormData] = useState({
-    full_name: '',
-    title: '', // Changed from 'role' to 'title' to match the profile schema
-    skills: [] as string[],
-    looking_for: [] as string[],
-    location: '',
-    bio: '',
+  const [step, setStep] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [profileData, setProfileData] = useState<OnboardingProfileData>({
+    full_name: profile?.full_name || '',
+    title: profile?.title || '',
+    skills: profile?.skills || [],
+    looking_for: profile?.looking_for || [],
+    location: profile?.location || '',
+    bio: profile?.bio || '',
+    onboarding_completed: true,
   });
+  const [skillInput, setSkillInput] = useState<string>('');
+  const [lookingForInput, setLookingForInput] = useState<string>('');
 
-  useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
+  // Function to add a skill
+  const addSkill = () => {
+    if (skillInput && !profileData.skills?.includes(skillInput)) {
+      setProfileData({
+        ...profileData,
+        skills: [...(profileData.skills || []), skillInput],
+      });
+      setSkillInput('');
     }
-    
-    // Check if user already has some profile data
-    const fetchProfileData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (error) throw error;
-        
-        if (data) {
-          setFormData({
-            full_name: data.full_name || '',
-            title: data.title || '', // Changed from 'role' to 'title'
-            skills: data.skills || [],
-            looking_for: data.looking_for || [],
-            location: data.location || '',
-            bio: data.bio || '',
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      }
-    };
-    
-    fetchProfileData();
-  }, [user, navigate]);
-
-  useEffect(() => {
-    setProgress((currentStep / 6) * 100);
-  }, [currentStep]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleMultiSelectChange = (name: string, values: string[]) => {
-    setFormData(prev => ({ ...prev, [name]: values }));
+  // Function to remove a skill
+  const removeSkill = (skill: string) => {
+    setProfileData({
+      ...profileData,
+      skills: profileData.skills?.filter(s => s !== skill) || [],
+    });
   };
 
+  // Function to add a looking for item
+  const addLookingFor = () => {
+    if (lookingForInput && !profileData.looking_for?.includes(lookingForInput)) {
+      setProfileData({
+        ...profileData,
+        looking_for: [...(profileData.looking_for || []), lookingForInput],
+      });
+      setLookingForInput('');
+    }
+  };
+
+  // Function to remove a looking for item
+  const removeLookingFor = (item: string) => {
+    setProfileData({
+      ...profileData,
+      looking_for: profileData.looking_for?.filter(i => i !== item) || [],
+    });
+  };
+
+  // Function to handle form submission
   const handleSubmit = async () => {
     if (!user) return;
-
+    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          ...formData,
-          onboarding_completed: true,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      toast.success('Profile completed successfully!');
+      setLoading(true);
+      
+      await updateProfile({ 
+        ...profileData,
+        onboarding_completed: true 
+      });
+      
+      toast.success('Profile updated successfully!');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Failed to update profile');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
+  // Function to navigate to the next step
+  const nextStep = () => {
+    setStep(step + 1);
+  };
+
+  // Function to navigate to the previous step
+  const prevStep = () => {
+    setStep(step - 1);
+  };
+
+  // Render content based on the current step
+  const renderStepContent = () => {
+    switch (step) {
       case 1:
         return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                placeholder="Enter your full name"
-                required
-              />
+          <>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  placeholder="Enter your full name"
+                  value={profileData.full_name}
+                  onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  type="text"
+                  id="title"
+                  placeholder="e.g., Software Engineer, Designer"
+                  value={profileData.title || ''}
+                  onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
+            <Button className="mt-4" onClick={nextStep}>
+              Next
+            </Button>
+          </>
         );
       case 2:
         return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Role</Label>
-              <MultiSelect
-                id="title"
-                options={ROLES}
-                value={formData.title ? [formData.title] : []}
-                onChange={(values) => handleMultiSelectChange('title', values)}
-                placeholder="Select your role"
-                singleSelect
-                required
-              />
+          <>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="skills">Skills</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    type="text"
+                    id="skills"
+                    placeholder="Add a skill"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                  />
+                  <Button type="button" size="sm" onClick={addSkill}>
+                    Add
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {profileData.skills?.map((skill) => (
+                    <Badge key={skill} variant="secondary">
+                      {skill}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => removeSkill(skill)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={prevStep}>
+                Previous
+              </Button>
+              <Button onClick={nextStep}>Next</Button>
+            </div>
+          </>
         );
       case 3:
         return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="skills">Skills</Label>
-              <MultiSelect
-                id="skills"
-                options={SKILLS}
-                value={formData.skills}
-                onChange={(values) => handleMultiSelectChange('skills', values)}
-                placeholder="Select your skills"
-                required
-              />
+          <>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="lookingFor">Looking For</Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    type="text"
+                    id="lookingFor"
+                    placeholder="Add what you're looking for"
+                    value={lookingForInput}
+                    onChange={(e) => setLookingForInput(e.target.value)}
+                  />
+                  <Button type="button" size="sm" onClick={addLookingFor}>
+                    Add
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {profileData.looking_for?.map((item) => (
+                    <Badge key={item} variant="secondary">
+                      {item}
+                      <X
+                        className="ml-1 h-3 w-3 cursor-pointer"
+                        onClick={() => removeLookingFor(item)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={prevStep}>
+                Previous
+              </Button>
+              <Button onClick={nextStep}>Next</Button>
+            </div>
+          </>
         );
       case 4:
         return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="looking_for">What are you looking for?</Label>
-              <MultiSelect
-                id="looking_for"
-                options={LOOKING_FOR}
-                value={formData.looking_for}
-                onChange={(values) => handleMultiSelectChange('looking_for', values)}
-                placeholder="Select what you're looking for"
-                required
-              />
+          <>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  type="text"
+                  id="location"
+                  placeholder="Enter your location"
+                  value={profileData.location || ''}
+                  onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  placeholder="Tell us a bit about yourself"
+                  value={profileData.bio || ''}
+                  onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
-        );
-      case 5:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="Enter your city or pincode"
-                required
-              />
+            <div className="flex justify-between mt-4">
+              <Button variant="outline" onClick={prevStep}>
+                Previous
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? 'Submitting...' : 'Submit'}
+              </Button>
             </div>
-          </div>
-        );
-      case 6:
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="bio">Bio/Introduction</Label>
-              <Textarea
-                id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                placeholder="Tell us about yourself"
-                required
-                rows={4}
-              />
-            </div>
-          </div>
+          </>
         );
       default:
         return null;
@@ -238,40 +268,14 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center">Complete Your Profile</CardTitle>
-          <Progress value={progress} className="mt-4" />
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-            {renderStep()}
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
-                disabled={currentStep === 1}
-              >
-                Previous
-              </Button>
-              {currentStep < 6 ? (
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep(prev => Math.min(6, prev + 1))}
-                >
-                  Next
-                </Button>
-              ) : (
-                <Button type="button" onClick={handleSubmit}>
-                  Complete Profile
-                </Button>
-              )}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+    <div className="container py-8">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-4">Complete Your Profile</h1>
+        <p className="text-muted-foreground mb-8">
+          Tell us a bit about yourself to get started.
+        </p>
+        {renderStepContent()}
+      </div>
     </div>
   );
 }

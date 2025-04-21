@@ -2,7 +2,7 @@
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { EmptyPostsState } from "./EmptyState";
 import { ProjectCard } from "./ProjectCard";
-import type { Project, Profile } from "@/hooks/useProjects";
+import { Project, Profile } from "@/hooks/useProjects";
 
 interface ProjectListProps {
   loading: boolean;
