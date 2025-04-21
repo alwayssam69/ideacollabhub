@@ -10,6 +10,10 @@ DROP TYPE IF EXISTS user_role CASCADE;
 DROP TYPE IF EXISTS looking_for_type CASCADE;
 DROP TYPE IF EXISTS connection_status CASCADE;
 DROP TYPE IF EXISTS project_status CASCADE;
+DROP TYPE IF EXISTS experience_level CASCADE;
+DROP TYPE IF EXISTS project_stage CASCADE;
+DROP TYPE IF EXISTS availability CASCADE;
+DROP TYPE IF EXISTS work_type CASCADE;
 
 -- Create enums
 CREATE TYPE user_role AS ENUM (
@@ -47,24 +51,64 @@ CREATE TYPE project_status AS ENUM (
     'on_hold'
 );
 
+CREATE TYPE experience_level AS ENUM (
+    'student',
+    'entry_level',
+    'mid_level',
+    'senior_level',
+    'executive'
+);
+
+CREATE TYPE project_stage AS ENUM (
+    'ideation',
+    'mvp',
+    'early_traction',
+    'growth',
+    'scale'
+);
+
+CREATE TYPE availability AS ENUM (
+    'full_time',
+    'part_time',
+    'weekends',
+    'evenings',
+    'flexible'
+);
+
+CREATE TYPE work_type AS ENUM (
+    'remote',
+    'hybrid',
+    'onsite',
+    'flexible'
+);
+
 -- Create profiles table
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    full_name TEXT,
+    full_name TEXT NOT NULL,
     title TEXT,
     avatar_url TEXT,
-    bio TEXT,
-    location TEXT,
-    role user_role,
-    skills TEXT[],
-    looking_for looking_for_type[],
-    preferred_industries TEXT[],
-    preferred_project_types TEXT[],
-    experience_level TEXT,
-    project_stage TEXT,
-    availability TEXT,
+    bio TEXT NOT NULL,
+    location TEXT NOT NULL,
+    role user_role NOT NULL,
+    skills TEXT[] NOT NULL,
+    looking_for looking_for_type[] NOT NULL,
+    preferred_industries TEXT[] NOT NULL,
+    preferred_project_types TEXT[] NOT NULL,
+    experience_level experience_level NOT NULL,
+    project_stage project_stage NOT NULL,
+    availability availability NOT NULL,
+    work_type work_type NOT NULL,
     linkedin_url TEXT,
     portfolio_url TEXT,
+    github_url TEXT,
+    twitter_url TEXT,
+    website_url TEXT,
+    timezone TEXT,
+    languages TEXT[],
+    education TEXT[],
+    certifications TEXT[],
+    previous_projects TEXT[],
     onboarding_completed BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())

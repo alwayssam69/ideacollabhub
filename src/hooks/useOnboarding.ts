@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 
 export function useOnboarding() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const checkOnboardingStatus = async () => {
+    async function checkOnboarding() {
       if (!user) {
         setLoading(false);
         return;
@@ -18,32 +18,28 @@ export function useOnboarding() {
 
       try {
         const { data, error } = await supabase
-          .from("profiles")
-          .select("onboarding_completed")
-          .eq("id", user.id)
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
           .single();
 
         if (error) throw error;
 
-        // If onboarding_completed is false or null, user needs onboarding
         setNeedsOnboarding(!data?.onboarding_completed);
+        
+        if (!data?.onboarding_completed) {
+          navigate('/onboarding');
+        }
       } catch (error) {
-        console.error("Error checking onboarding status:", error);
-        // Default to needing onboarding if there's an error
-        setNeedsOnboarding(true);
+        console.error('Error checking onboarding status:', error);
+        setNeedsOnboarding(null);
       } finally {
         setLoading(false);
       }
-    };
-
-    checkOnboardingStatus();
-  }, [user]);
-
-  useEffect(() => {
-    if (needsOnboarding === true && !loading) {
-      navigate("/onboarding");
     }
-  }, [needsOnboarding, loading, navigate]);
+
+    checkOnboarding();
+  }, [user, navigate]);
 
   return {
     needsOnboarding,

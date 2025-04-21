@@ -34,43 +34,42 @@ import TermsPage from "./pages/TermsPage";
 import ContactPage from "./pages/ContactPage";
 import FAQPage from "./pages/FAQPage";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useAuth } from '@/hooks/useAuth';
+import { AuthForm } from '@/components/auth/AuthForm';
+import { Loader2 } from 'lucide-react';
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
-  const { loading } = useOnboarding();
+  const { user, loading: authLoading } = useAuth();
+  const { loading: onboardingLoading } = useOnboarding();
 
-  if (loading) {
+  if (authLoading || onboardingLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
     <Routes>
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Index />} />
-        <Route path="discover" element={<ProtectedRoute><DiscoverPage /></ProtectedRoute>} />
-        <Route path="projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-        <Route path="connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
-        <Route path="messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
-        <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-        <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-        <Route path="pending-requests" element={<ProtectedRoute><PendingRequestsPage /></ProtectedRoute>} />
-        <Route path="explore-posts" element={<ProtectedRoute><ExplorePostsPage /></ProtectedRoute>} />
-        <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        <Route path="about" element={<AboutPage />} />
-        <Route path="privacy" element={<PrivacyPage />} />
-        <Route path="terms" element={<TermsPage />} />
-        <Route path="contact" element={<ContactPage />} />
-        <Route path="faq" element={<FAQPage />} />
-      </Route>
-      <Route path="/auth/:mode" element={<AuthPage />} />
-      <Route path="/onboarding" element={<OnboardingPage />} />
-      <Route path="/login" element={<Login />} />
+      <Route
+        path="/"
+        element={user ? <Navigate to="/dashboard" /> : <Navigate to="/auth" />}
+      />
+      <Route
+        path="/auth"
+        element={user ? <Navigate to="/dashboard" /> : <AuthForm />}
+      />
+      <Route
+        path="/onboarding"
+        element={user ? <OnboardingPage /> : <Navigate to="/auth" />}
+      />
+      <Route
+        path="/dashboard"
+        element={user ? <DashboardPage /> : <Navigate to="/auth" />}
+      />
     </Routes>
   );
 };
