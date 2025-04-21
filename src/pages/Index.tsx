@@ -261,12 +261,6 @@ function TestimonialCard({
   );
 }
 
-// 3D Model Component
-function Model({ url }: { url: string }) {
-  const { scene } = useGLTF(url);
-  return <primitive object={scene} />;
-}
-
 // Particle Background Component
 function ParticleBackground() {
   return (
@@ -444,12 +438,17 @@ export default function Index() {
                 transition={{ duration: 0.5, delay: 0.6 }}
                 className="relative"
               >
-                <Canvas>
-                  <ambientLight intensity={0.5} />
-                  <pointLight position={[10, 10, 10]} />
-                  <Model url="/3d-model.glb" />
-                  <OrbitControls enableZoom={false} />
-                </Canvas>
+                <div className="relative w-full aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 backdrop-blur-sm border border-primary/10 overflow-hidden">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-32 h-32 rounded-full bg-primary/10 animate-pulse" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-24 h-24 rounded-full bg-secondary/10 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-accent/10 animate-pulse" style={{ animationDelay: '1s' }} />
+                  </div>
+                </div>
               </motion.div>
             </div>
           </div>
