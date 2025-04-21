@@ -22,11 +22,18 @@ import { supabase } from "@/integrations/supabase/client";
 // Define a type for the profile data
 type OnboardingProfileData = {
   full_name: string;
-  title: string | null; // this is used instead of role
-  skills: string[] | null;
-  looking_for: string[] | null;
-  location: string | null;
-  bio: string | null;
+  title: string;
+  skills: string[];
+  looking_for: string[];
+  location: string;
+  bio: string;
+  experience_level: string;
+  project_stage: string;
+  preferred_industries: string[];
+  preferred_work_type: string[];
+  availability: string;
+  linkedin_url: string;
+  portfolio_url: string;
   onboarding_completed: boolean;
 };
 
@@ -150,7 +157,16 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("You must be logged in to complete your profile");
+      return;
+    }
+
+    // Validate required fields
+    if (!formData.full_name || !formData.title || !formData.experience_level || !formData.project_stage) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -160,7 +176,7 @@ export default function OnboardingPage() {
         .from("profiles")
         .update({
           full_name: formData.full_name,
-          role: formData.title,
+          title: formData.title,
           skills: formData.skills,
           looking_for: formData.looking_for,
           location: formData.location,
@@ -177,10 +193,19 @@ export default function OnboardingPage() {
         })
         .eq("id", user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile update error:", profileError);
+        throw new Error(profileError.message);
+      }
+
+      // Wait for a short moment to ensure the update is processed
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Update local profile state
+      await updateProfile();
 
       toast.success("Profile completed successfully!");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error("Failed to save profile. Please try again.");
@@ -419,8 +444,19 @@ export default function OnboardingPage() {
               Next
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? "Saving..." : "Complete Profile"}
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading}
+              className="w-full"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  Saving...
+                </div>
+              ) : (
+                "Complete Profile"
+              )}
             </Button>
           )}
         </div>
