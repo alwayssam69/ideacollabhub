@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,9 +35,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
+import { Profile } from "@/types/project";
 
 type Project = Tables<"projects">;
-type Profile = Tables<"profiles">;
 
 interface ProjectWithCreator extends Project {
   creator: Profile;
@@ -67,17 +68,54 @@ export default function ProjectsPage() {
 
     try {
       setLoading(true);
+      
+      // First get all projects
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select(`
-          *,
-          creator:profiles!user_id(*)
-        `)
+        .select('*')
         .order("created_at", { ascending: false });
 
       if (projectsError) throw projectsError;
 
-      setProjects(projectsData as ProjectWithCreator[]);
+      if (!projectsData || projectsData.length === 0) {
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+
+      // Then fetch profiles for the projects
+      const userIds = projectsData.map(project => project.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select('*')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of profiles by user_id for quick lookup
+      const profilesMap: Record<string, Profile> = {};
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          profilesMap[profile.id] = profile as Profile;
+        });
+      }
+
+      // Combine projects with their creators
+      const projectsWithCreators = projectsData.map(project => {
+        const creator = profilesMap[project.user_id] || {
+          id: project.user_id,
+          full_name: 'Unknown User',
+          avatar_url: null,
+          user_id: project.user_id
+        } as Profile;
+        
+        return {
+          ...project,
+          creator
+        } as ProjectWithCreator;
+      });
+
+      setProjects(projectsWithCreators);
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to load projects");
@@ -109,15 +147,27 @@ export default function ProjectsPage() {
       const { data: project, error } = await supabase
         .from("projects")
         .insert(projectData)
-        .select(`
-          *,
-          creator:profiles!user_id(*)
-        `)
+        .select()
         .single();
 
       if (error) throw error;
 
-      setProjects(prev => [project as ProjectWithCreator, ...prev]);
+      // Fetch the creator profile
+      const { data: creatorData, error: creatorError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (creatorError) throw creatorError;
+
+      // Add to projects list with creator data
+      const newProjectWithCreator = {
+        ...project,
+        creator: creatorData as Profile,
+      } as ProjectWithCreator;
+
+      setProjects(prev => [newProjectWithCreator, ...prev]);
       setDialogOpen(false);
       toast.success("Project created successfully!");
 
@@ -292,12 +342,12 @@ export default function ProjectsPage() {
                 <div className="flex items-center gap-3 mb-3">
                   <div className="h-8 w-8 rounded-full overflow-hidden">
                     <img
-                      src={project.creator.avatar_url || "/default-avatar.png"}
-                      alt={project.creator.full_name || "User"}
+                      src={project.creator?.avatar_url || "/default-avatar.png"}
+                      alt={project.creator?.full_name || "User"}
                       className="h-full w-full object-cover"
                     />
                   </div>
-                  <div className="text-sm font-medium">{project.creator.full_name}</div>
+                  <div className="text-sm font-medium">{project.creator?.full_name}</div>
                 </div>
                 <CardTitle className="line-clamp-2">{project.title}</CardTitle>
               </CardHeader>
@@ -333,7 +383,7 @@ export default function ProjectsPage() {
                   variant="ghost"
                   size="sm"
                   className="flex items-center gap-1"
-                  onClick={() => navigate(`/profile/${project.creator.id}`)}
+                  onClick={() => navigate(`/profile/${project.creator?.id}`)}
                 >
                   <User className="h-4 w-4" />
                   View Profile
@@ -341,7 +391,7 @@ export default function ProjectsPage() {
                 <Button 
                   variant="default" 
                   size="sm"
-                  onClick={() => navigate(`/messages?userId=${project.creator.id}`)}
+                  onClick={() => navigate(`/messages?userId=${project.creator?.id}`)}
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Contact
