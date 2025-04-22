@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
@@ -70,12 +71,20 @@ export default function ProfilePhotoUpload({
     }
   };
 
+  // Generate fallback text safely
+  const generateFallback = () => {
+    if (!userId || userId.length === 0) {
+      return "U"; // Default fallback if userId is empty or undefined
+    }
+    return userId[0].toUpperCase();
+  };
+
   return (
     <div className="relative">
       <Avatar className={`${sizeClasses[size]} relative`}>
         <AvatarImage src={previewUrl} alt="Profile photo" />
         <AvatarFallback className="bg-slate-700 text-slate-300">
-          {userId[0].toUpperCase()}
+          {generateFallback()}
         </AvatarFallback>
         {isUploading && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -99,4 +108,4 @@ export default function ProfilePhotoUpload({
       />
     </div>
   );
-} 
+}
