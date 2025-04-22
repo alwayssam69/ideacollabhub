@@ -133,6 +133,31 @@ export default function ExplorePostsPage() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select project duration" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="< 1 month">Less than 1 month</SelectItem>
+                          <SelectItem value="1-3 months">1-3 months</SelectItem>
+                          <SelectItem value="3-6 months">3-6 months</SelectItem>
+                          <SelectItem value="6-12 months">6-12 months</SelectItem>
+                          <SelectItem value="> 12 months">Over 12 months</SelectItem>
+                          <SelectItem value="Ongoing">Ongoing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <Button type="submit" className="w-full">Create Project</Button>
               </form>
             </Form>

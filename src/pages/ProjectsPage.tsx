@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, PlusCircle, ThumbsUp, User } from "lucide-react";
+import { MessageCircle, PlusCircle, User } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -56,7 +55,6 @@ export default function ProjectsPage() {
     required_skills: [] as string[],
     looking_for: "",
     duration: "",
-    project_type: "",
   });
 
   useEffect(() => {
@@ -139,9 +137,7 @@ export default function ProjectsPage() {
         required_skills: newProject.required_skills,
         looking_for: newProject.looking_for,
         duration: newProject.duration,
-        project_type: newProject.project_type,
         user_id: user.id,
-        status: "active",
       };
 
       const { data: project, error } = await supabase
@@ -178,7 +174,6 @@ export default function ProjectsPage() {
         required_skills: [],
         looking_for: "",
         duration: "",
-        project_type: "",
       });
     } catch (error) {
       console.error("Error creating project:", error);
@@ -266,24 +261,6 @@ export default function ProjectsPage() {
                       <SelectItem value="Marketing">Marketing Expert</SelectItem>
                       <SelectItem value="Project Manager">Project Manager</SelectItem>
                       <SelectItem value="Advisor">Advisor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="projectType">Project Type</Label>
-                  <Select
-                    onValueChange={(value) => setNewProject({ ...newProject, project_type: value })}
-                    value={newProject.project_type}
-                  >
-                    <SelectTrigger id="projectType">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="startup">Startup</SelectItem>
-                      <SelectItem value="freelance">Freelance</SelectItem>
-                      <SelectItem value="hackathon">Hackathon</SelectItem>
-                      <SelectItem value="research">Research</SelectItem>
-                      <SelectItem value="open-source">Open Source</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
