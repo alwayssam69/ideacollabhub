@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -68,12 +69,10 @@ export function useConnectionRequests() {
     
     try {
       // Check if a request already exists
-      const { data: existingRequest, error: checkError } = await supabase
+      const { data: existingRequest } = await supabase
         .from('connections')
         .select('*')
         .or(`and(requester_id.eq.${user.id},recipient_id.eq.${recipientId}),and(requester_id.eq.${recipientId},recipient_id.eq.${user.id})`);
-      
-      if (checkError) throw checkError;
       
       if (existingRequest && existingRequest.length > 0) {
         const status = existingRequest[0].status;
@@ -90,31 +89,19 @@ export function useConnectionRequests() {
       const { data, error } = await supabase
         .from('connections')
         .insert([
-          { 
-            requester_id: user.id, 
-            recipient_id: recipientId, 
-            status: 'pending',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
+          { requester_id: user.id, recipient_id: recipientId, status: 'pending' }
         ])
         .select();
       
       if (error) throw error;
       
-      if (!data || data.length === 0) {
-        throw new Error('Failed to create connection request');
-      }
-      
-      // Update local state without triggering another fetch
-      setSentRequests(prev => [...prev, data[0] as unknown as ConnectionRequest]);
-      
-      return { success: true, data: data[0] };
+      toast.success("Connection request sent successfully");
+      fetchConnectionRequests(); // Refresh the requests
+      return { success: true, data };
     } catch (err) {
       console.error('Error sending connection request:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to send connection request';
-      toast.error(errorMessage);
-      return { error: errorMessage };
+      toast.error(err instanceof Error ? err.message : 'Failed to send connection request');
+      return { error: err instanceof Error ? err.message : 'Failed to send connection request' };
     }
   };
   

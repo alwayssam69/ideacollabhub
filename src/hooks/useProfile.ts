@@ -48,59 +48,22 @@ export const useProfile = () => {
 
     try {
       setLoading(true);
-      
-      // Validate required fields
-      if (updates.full_name && updates.full_name.length < 2) {
-        throw new Error('Full name must be at least 2 characters long');
-      }
-
-      if (updates.bio && updates.bio.length > 500) {
-        throw new Error('Bio must not exceed 500 characters');
-      }
-
-      // Prepare the update data
-      const updateData = {
-        ...updates,
-        updated_at: new Date().toISOString(),
-      };
-
-      // First, check if profile exists
-      const { data: existingProfile, error: checkError } = await supabase
+      const { error } = await supabase
         .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .single();
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-        throw checkError;
-      }
-
-      let result;
-      if (!existingProfile) {
-        // Create new profile
-        result = await supabase
-          .from('profiles')
-          .insert([{ ...updateData, id: user.id }]);
-      } else {
-        // Update existing profile
-        result = await supabase
-          .from('profiles')
-          .update(updateData)
-          .eq('id', user.id);
-      }
-
-      if (result.error) {
-        console.error('Supabase error:', result.error);
-        throw new Error(result.error.message);
-      }
+      if (error) throw error;
 
       // Refresh profile data
       await fetchProfile();
       toast.success('Profile updated successfully');
     } catch (err) {
       console.error('Error updating profile:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
-      toast.error(errorMessage);
+      toast.error('Failed to update profile');
       throw err;
     } finally {
       setLoading(false);

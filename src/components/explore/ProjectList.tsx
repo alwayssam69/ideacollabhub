@@ -2,7 +2,7 @@
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { EmptyPostsState } from "./EmptyState";
 import { ProjectCard } from "./ProjectCard";
-import { Project, Profile } from "@/hooks/useProjects";
+import type { Project, Profile } from "@/hooks/useProjects";
 
 interface ProjectListProps {
   loading: boolean;
@@ -22,12 +22,12 @@ export function ProjectList({ loading, projects, creators }: ProjectListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => {
-        const creator = project.user_id ? creators[project.user_id] : undefined;
+        const creator = creators[project.user_id];
         return (
           <ProjectCard 
             key={project.id} 
-            project={project as any}  // Using any to bypass type issues temporarily
-            creator={creator as any}  // Using any to bypass type issues temporarily
+            project={project} 
+            creator={creator}
           />
         );
       })}

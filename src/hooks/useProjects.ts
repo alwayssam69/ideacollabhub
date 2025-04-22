@@ -1,117 +1,88 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  image_url?: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
+export type Project = Tables<"projects">;
+export type Profile = Tables<"profiles">;
+
+interface UseProjectsResult {
+  projects: Project[];
+  creators: Record<string, Profile>;
+  loading: boolean;
 }
 
-export function useProjects() {
+export const useProjects = (
+  selectedCategory: string | null,
+  selectedIndustry: string | null,
+  selectedLocation: string | null,
+  selectedSkill: string | null
+): UseProjectsResult => {
+  const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
-  const { user } = useAuth();
+  const [creators, setCreators] = useState<Record<string, Profile>>({});
 
   useEffect(() => {
-    async function fetchProjects() {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
+    const fetchProjects = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
 
-        if (error) {
-          throw error;
+        // Use explicit typing to avoid deep instantiation errors
+        let query = supabase.from("projects").select("*");
+
+        if (selectedCategory) {
+          query = query.eq("duration", selectedCategory);
+        }
+        if (selectedIndustry) {
+          query = query.eq("industry", selectedIndustry);
+        }
+        if (selectedLocation) {
+          query = query.eq("location", selectedLocation);
+        }
+        if (selectedSkill) {
+          query = query.contains("required_skills", [selectedSkill]);
         }
 
-        setProjects(data as Project[]);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('An unknown error occurred'));
-        console.error('Error fetching projects:', err);
-      } finally {
+        const { data: rawProjects, error } = await query;
+
+        if (error) throw error;
+
+        // Use explicit casting to Project[] to avoid deep instantiation
+        const projectsData = rawProjects as unknown as Project[] || [];
+        setProjects(projectsData);
+
+        const userIds = [...new Set(projectsData.map((p) => p.user_id))];
+
+        if (userIds.length > 0) {
+          const { data: rawProfiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .in("id", userIds);
+
+          if (profileError) throw profileError;
+
+          // Use explicit casting to Profile[] to avoid deep instantiation
+          const profilesData = rawProfiles as unknown as Profile[] || [];
+          
+          const profilesMap: Record<string, Profile> = {};
+          profilesData.forEach((profile) => {
+            profilesMap[profile.id] = profile;
+          });
+
+          setCreators(profilesMap);
+        }
+
+        setLoading(false);
+      } catch (error: any) {
+        console.error("Error fetching projects:", error);
+        toast.error("Failed to load projects");
         setLoading(false);
       }
-    }
+    };
 
     fetchProjects();
-  }, [user]);
+  }, [selectedCategory, selectedIndustry, selectedLocation, selectedSkill]);
 
-  const createProject = async (projectData: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'user_id'>) => {
-    if (!user) throw new Error('User not authenticated');
-    
-    try {
-      const newProject = {
-        ...projectData,
-        user_id: user.id
-      };
-      
-      const { data, error } = await supabase
-        .from('projects')
-        .insert([newProject])
-        .select();
-        
-      if (error) throw error;
-      
-      // Type assertion to avoid deep instantiation
-      setProjects(prev => [data[0] as Project, ...prev]);
-      return data[0] as Project;
-    } catch (err) {
-      throw err instanceof Error ? err : new Error('Failed to create project');
-    }
-  };
-
-  const updateProject = async (id: string, updates: Partial<Omit<Project, 'id' | 'created_at' | 'user_id'>>) => {
-    if (!user) throw new Error('User not authenticated');
-    
-    try {
-      const { data, error } = await supabase
-        .from('projects')
-        .update(updates)
-        .eq('id', id)
-        .eq('user_id', user.id)
-        .select();
-        
-      if (error) throw error;
-      
-      // Type assertion to avoid deep instantiation
-      setProjects(prev => prev.map(p => p.id === id ? (data[0] as Project) : p));
-      return data[0] as Project;
-    } catch (err) {
-      throw err instanceof Error ? err : new Error('Failed to update project');
-    }
-  };
-
-  const deleteProject = async (id: string) => {
-    if (!user) throw new Error('User not authenticated');
-    
-    try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
-        
-      if (error) throw error;
-      
-      setProjects(prev => prev.filter(p => p.id !== id));
-    } catch (err) {
-      throw err instanceof Error ? err : new Error('Failed to delete project');
-    }
-  };
-
-  return { projects, loading, error, createProject, updateProject, deleteProject };
-}
+  return { projects, creators, loading };
+};

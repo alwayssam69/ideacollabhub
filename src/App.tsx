@@ -1,77 +1,69 @@
-import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
-import { useOnboarding } from '@/hooks/useOnboarding';
-import { Toaster } from 'sonner';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Spinner } from '@/components/ui/spinner';
-import AuthPage from '@/pages/AuthPage';
-import DashboardPage from '@/pages/DashboardPage';
-import OnboardingPage from '@/pages/OnboardingPage';
-import VerifyEmailPage from '@/pages/VerifyEmailPage';
-import ExplorePostsPage from '@/pages/ExplorePostsPage';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
-  const { isOnboardingComplete, isLoading: onboardingLoading } = useOnboarding();
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 
-  if (loading || onboardingLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Spinner />
-      </div>
-    );
-  }
+import MainLayout from "./components/layout/MainLayout";
+import Index from "./pages/Index";
+import AuthPage from "./pages/AuthPage";
+import DiscoverPage from "./pages/DiscoverPage";
+import ProjectsPage from "./pages/ProjectsPage";
+import ConnectionsPage from "./pages/ConnectionsPage";
+import MessagesPage from "./pages/MessagesPage";
+import ProfilePage from "./pages/ProfilePage";
+import NotFound from "./pages/NotFound";
+import OnboardingPage from "./pages/OnboardingPage";
+import DashboardPage from "./pages/DashboardPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import PendingRequestsPage from "./pages/PendingRequestsPage";
+import ExplorePostsPage from "./pages/ExplorePostsPage";
+import SettingsPage from "./pages/SettingsPage";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import AboutPage from "./pages/AboutPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
+import ContactPage from "./pages/ContactPage";
+import FAQPage from "./pages/FAQPage";
 
-  if (!session) {
-    return <Navigate to="/auth" />;
-  }
+const queryClient = new QueryClient();
 
-  if (!session.user.email_confirmed_at) {
-    return <Navigate to="/verify-email" />;
-  }
-
-  if (!isOnboardingComplete) {
-    return <Navigate to="/onboarding" />;
-  }
-
-  return <>{children}</>;
-}
-
-export default function App() {
-  return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <Toaster position="top-center" />
-      <Router>
-        <Routes>
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute>
-                <OnboardingPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/explore"
-            element={
-              <ProtectedRoute>
-                <ExplorePostsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Routes>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Index />} />
+              <Route path="discover" element={<ProtectedRoute><DiscoverPage /></ProtectedRoute>} />
+              <Route path="projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+              <Route path="connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
+              <Route path="messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+              <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+              <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+              <Route path="pending-requests" element={<ProtectedRoute><PendingRequestsPage /></ProtectedRoute>} />
+              <Route path="explore-posts" element={<ProtectedRoute><ExplorePostsPage /></ProtectedRoute>} />
+              <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="about" element={<AboutPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
+              <Route path="terms" element={<TermsPage />} />
+              <Route path="contact" element={<ContactPage />} />
+              <Route path="faq" element={<FAQPage />} />
+            </Route>
+            <Route path="/auth/:mode" element={<AuthPage />} />
+            <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+        </TooltipProvider>
+      </BrowserRouter>
     </ThemeProvider>
-  );
-}
+  </QueryClientProvider>
+);
+
+export default App;

@@ -17,7 +17,7 @@ export default function ExplorePostsPage() {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
 
-  const { projects, isLoading, creators } = useProjects(
+  const { projects, creators, loading } = useProjects(
     selectedCategory,
     selectedIndustry,
     selectedLocation,
@@ -67,41 +67,41 @@ export default function ExplorePostsPage() {
           
           <TabsContent value="all" className="mt-0">
             <ProjectList
-              loading={isLoading}
+              loading={loading}
               projects={projects}
-              creators={creators || {}}
+              creators={creators}
             />
           </TabsContent>
           
           <TabsContent value="startup">
             <ProjectList
-              loading={isLoading}
+              loading={loading}
               projects={projects.filter(p => p.duration === "startup")}
-              creators={creators || {}}
+              creators={creators}
             />
           </TabsContent>
           
           <TabsContent value="freelance">
             <ProjectList
-              loading={isLoading}
+              loading={loading}
               projects={projects.filter(p => p.duration === "freelance")}
-              creators={creators || {}}
+              creators={creators}
             />
           </TabsContent>
           
           <TabsContent value="hackathon">
             <ProjectList
-              loading={isLoading}
+              loading={loading}
               projects={projects.filter(p => p.duration === "hackathon")}
-              creators={creators || {}}
+              creators={creators}
             />
           </TabsContent>
           
           <TabsContent value="research">
             <ProjectList
-              loading={isLoading}
+              loading={loading}
               projects={projects.filter(p => p.duration === "research")}
-              creators={creators || {}}
+              creators={creators}
             />
           </TabsContent>
         </Tabs>
