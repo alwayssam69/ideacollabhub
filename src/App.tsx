@@ -1,77 +1,77 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import { AuthProvider } from '@/context/AuthContext';
-import { ConnectionProvider } from '@/context/ConnectionContext';
-import { MessageProvider } from '@/context/MessageContext';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnboarding } from '@/hooks/useOnboarding';
-import { Loader2 } from 'lucide-react';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Spinner } from '@/components/ui/spinner';
+import AuthPage from '@/pages/AuthPage';
+import DashboardPage from '@/pages/DashboardPage';
+import OnboardingPage from '@/pages/OnboardingPage';
+import VerifyEmailPage from '@/pages/VerifyEmailPage';
+import ExplorePostsPage from '@/pages/ExplorePostsPage';
 
-// Pages
-import AuthPage from "./pages/AuthPage";
-import { OnboardingPage } from "./pages/OnboardingPage";
-import DashboardPage from "./pages/DashboardPage";
-import MainLayout from "./components/layout/MainLayout";
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+  const { isOnboardingComplete, isLoading: onboardingLoading } = useOnboarding();
 
-const queryClient = new QueryClient();
-
-function AppContent() {
-  const { user, loading: authLoading } = useAuth();
-  const { loading: onboardingLoading } = useOnboarding();
-
-  if (authLoading || onboardingLoading) {
+  if (loading || onboardingLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Spinner />
       </div>
     );
   }
 
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={user ? <Navigate to="/dashboard" /> : <Navigate to="/auth" />}
-      />
-      <Route
-        path="/auth"
-        element={user ? <Navigate to="/dashboard" /> : <AuthPage />}
-      />
-      <Route
-        path="/onboarding"
-        element={user ? <OnboardingPage /> : <Navigate to="/auth" />}
-      />
-      <Route
-        path="/dashboard"
-        element={
-          <MainLayout>
-            <DashboardPage />
-          </MainLayout>
-        }
-      />
-    </Routes>
-  );
+  if (!session) {
+    return <Navigate to="/auth" />;
+  }
+
+  if (!session.user.email_confirmed_at) {
+    return <Navigate to="/verify-email" />;
+  }
+
+  if (!isOnboardingComplete) {
+    return <Navigate to="/onboarding" />;
+  }
+
+  return <>{children}</>;
 }
 
-function App() {
+export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-        <AuthProvider>
-          <ConnectionProvider>
-            <MessageProvider>
-              <BrowserRouter>
-                <AppContent />
-                <Toaster />
-              </BrowserRouter>
-            </MessageProvider>
-          </ConnectionProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <Toaster position="top-center" />
+      <Router>
+        <Routes>
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/explore"
+            element={
+              <ProtectedRoute>
+                <ExplorePostsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Router>
+    </ThemeProvider>
   );
 }
-
-export default App;

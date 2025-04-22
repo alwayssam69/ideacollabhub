@@ -48,7 +48,8 @@ const profileSchema = z.object({
   website_url: z.string().url('Invalid Website URL').optional().or(z.literal('')),
 });
 
-export function OnboardingPage() {
+// Change from 'export function OnboardingPage()' to 'export default function OnboardingPage()'
+export default function OnboardingPage() {
   const { user } = useAuth();
   const [step, setStep] = useState<OnboardingStep>('personal');
   const [loading, setLoading] = useState(false);
@@ -113,9 +114,12 @@ export function OnboardingPage() {
     );
 
     try {
-      profileSchema.pick(
-        Object.fromEntries(stepFields[currentStep].map(field => [field, true]))
-      ).parse(stepData);
+      const fieldsToValidate = stepFields[currentStep].reduce((acc, field) => {
+        acc[field] = true;
+        return acc;
+      }, {} as Record<keyof typeof formData, true>);
+      
+      profileSchema.pick(fieldsToValidate as any).parse(stepData);
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -552,4 +556,4 @@ export function OnboardingPage() {
       </div>
     </div>
   );
-} 
+}

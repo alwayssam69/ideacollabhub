@@ -1,106 +1,105 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Tables } from "@/integrations/supabase/types";
 
-// Define explicit interfaces instead of using Tables directly
-export interface Project {
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
+
+// Explicitly define the Project type with all fields that might be used
+export type Project = {
   id: string;
-  user_id: string;
   title: string;
   description: string;
-  duration: string;
-  industry: string;
-  location: string;
-  required_skills: string[];
   created_at: string;
   updated_at: string;
-}
+  user_id: string;
+  duration?: string | null;
+  looking_for: string;
+  required_skills?: string[] | null;
+  repository_url?: string;
+  website_url?: string;
+  thumbnail_url?: string;
+  status?: 'active' | 'completed' | 'archived';
+  tags?: string[];
+  owner_id?: string;
+  name?: string;
+};
 
-export interface Profile {
+// Define the Profile type
+export type Profile = {
   id: string;
-  username: string;
-  full_name: string;
+  full_name: string | null;
   avatar_url: string | null;
-  email: string;
-  created_at: string;
-}
+  title: string | null;
+  location: string | null;
+};
 
-interface UseProjectsResult {
-  projects: Project[];
-  creators: Record<string, Profile>;
-  loading: boolean;
-}
-
-export const useProjects = (
-  selectedCategory: string | null,
-  selectedIndustry: string | null,
-  selectedLocation: string | null,
-  selectedSkill: string | null
-): UseProjectsResult => {
-  const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState<Project[]>([]);
+export function useProjects(
+  category?: string | null,
+  industry?: string | null, 
+  location?: string | null,
+  skill?: string | null
+) {
+  const [filter, setFilter] = useState<string | null>(null);
   const [creators, setCreators] = useState<Record<string, Profile>>({});
 
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoading(true);
+  // Simplified fetchProjects to avoid type instantiation issues
+  const fetchProjects = async () => {
+    let query = supabase.from('projects').select('*');
 
-        let query = supabase.from("projects").select("*");
+    if (filter) {
+      query = query.eq('status', filter);
+    }
 
-        if (selectedCategory) {
-          query = query.eq("duration", selectedCategory);
-        }
-        if (selectedIndustry) {
-          query = query.eq("industry", selectedIndustry);
-        }
-        if (selectedLocation) {
-          query = query.eq("location", selectedLocation);
-        }
-        if (selectedSkill) {
-          query = query.contains("required_skills", [selectedSkill]);
-        }
+    // Apply additional filters if provided
+    if (category) query = query.eq('category', category);
+    if (industry) query = query.eq('industry', industry);
+    if (skill) query = query.contains('required_skills', [skill]);
 
-        const { data, error } = await query;
+    const { data, error } = await query;
 
-        if (error) throw error;
+    if (error) {
+      console.error('Error fetching projects:', error);
+      throw new Error('Failed to fetch projects');
+    }
 
-        // Fix deep typing issues with explicit type assertion
-        const projectsData = data ? [...data] : [];
-        setProjects(projectsData as unknown as Project[]);
-
-        const userIds = [...new Set(projectsData.map((p) => p.user_id))];
-
-        if (userIds.length > 0) {
-          const { data: profilesData, error: profileError } = await supabase
-            .from("profiles")
-            .select("*")
-            .in("id", userIds);
-
-          if (profileError) throw profileError;
-
-          const profilesMap: Record<string, Profile> = {};
-          if (profilesData) {
-            // Fix deep typing issues with explicit type assertion
-            profilesData.forEach((profile) => {
-              profilesMap[profile.id] = profile as unknown as Profile;
-            });
-          }
-
-          setCreators(profilesMap);
-        }
-
-        setLoading(false);
-      } catch (error: any) {
-        console.error("Error fetching projects:", error);
-        toast.error("Failed to load projects");
-        setLoading(false);
+    // Fetch creators for these projects
+    const userIds = [...new Set((data || []).map((project: any) => project.user_id))];
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, title, location')
+        .in('id', userIds);
+      
+      const creatorsMap: Record<string, Profile> = {};
+      if (profiles) {
+        profiles.forEach((profile: any) => {
+          creatorsMap[profile.id] = {
+            id: profile.id,
+            full_name: profile.full_name,
+            avatar_url: profile.avatar_url,
+            title: profile.title,
+            location: profile.location
+          };
+        });
+        setCreators(creatorsMap);
       }
-    };
+    }
 
-    fetchProjects();
-  }, [selectedCategory, selectedIndustry, selectedLocation, selectedSkill]);
+    // Use type assertion to avoid deep instantiation issues
+    return (data || []) as Project[];
+  };
 
-  return { projects, creators, loading };
-};
+  const { data: projects = [], isLoading, error } = useQuery({
+    queryKey: ['projects', filter, category, industry, location, skill],
+    queryFn: fetchProjects,
+  });
+
+  return {
+    projects,
+    isLoading,
+    error,
+    setFilter,
+    filter,
+    creators,
+    loading: isLoading, // Add loading alias for backward compatibility
+  };
+}

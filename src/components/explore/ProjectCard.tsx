@@ -30,15 +30,14 @@ import {
   UserPlus,
   X
 } from "lucide-react";
-import { Profile } from "@/hooks/useProjects";
+import { Profile, Project } from "@/hooks/useProjects";
 import { useConnectionRequests } from '@/hooks/useConnectionRequests';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Tables } from "@/integrations/supabase/types";
 
 type ProjectCardProps = {
-  project: Tables<'projects'>;
-  creator: Profile;
+  project: Project;
+  creator?: Profile;
 };
 
 export function ProjectCard({ project, creator }: ProjectCardProps) {
@@ -77,7 +76,7 @@ export function ProjectCard({ project, creator }: ProjectCardProps) {
             <Bookmark className="h-4 w-4" />
           </Button>
         </div>
-        <CardTitle className="text-lg text-gradient-primary">{project.title}</CardTitle>
+        <CardTitle className="text-lg text-gradient-primary">{project.title || project.name}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
