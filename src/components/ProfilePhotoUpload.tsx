@@ -31,6 +31,12 @@ export default function ProfilePhotoUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Safety check - require userId for file uploads
+    if (!userId) {
+      toast.error("User ID is required for uploading photos");
+      return;
+    }
+
     try {
       setIsUploading(true);
       const fileExt = file.name.split('.').pop();
@@ -73,8 +79,8 @@ export default function ProfilePhotoUpload({
 
   // Generate fallback text safely
   const generateFallback = () => {
-    if (!userId || userId.length === 0) {
-      return "U"; // Default fallback if userId is empty or undefined
+    if (!userId || typeof userId !== 'string' || userId.length === 0) {
+      return "U"; // Default fallback if userId is missing or empty
     }
     return userId[0].toUpperCase();
   };
