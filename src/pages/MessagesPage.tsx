@@ -1,9 +1,9 @@
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, UserPlus, AlertCircle, MessageSquare, Search } from "lucide-react";
+import { Send, UserPlus, AlertCircle, MessageSquare, Search, User } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,7 @@ type Conversation = {
 
 export default function MessagesPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialUserId = searchParams.get('userId');
   const { sentRequests, requests, refresh } = useConnectionRequests();
@@ -57,109 +58,110 @@ export default function MessagesPage() {
     : conversations;
 
   // Fetch conversations (connections with messages)
-  useEffect(() => {
-    const fetchConversations = async () => {
-      if (!user) return;
-      setLoading(true);
+  const fetchConversations = async () => {
+    if (!user) return;
+    setLoading(true);
+    
+    try {
+      // Make sure we have the latest connections data
+      await refresh();
       
-      try {
-        // Make sure we have the latest connections data
-        await refresh();
+      // Get all accepted connections
+      const acceptedConnections = [
+        ...(sentRequests || []).filter(req => req.status === 'accepted'),
+        ...(requests || []).filter(req => req.status === 'accepted')
+      ];
+      
+      // Create array of conversation objects
+      const conversationsArray: Conversation[] = [];
+      
+      for (const connection of acceptedConnections) {
+        // Determine the other user in the connection
+        const otherUserId = connection.requester_id === user.id 
+          ? connection.recipient_id 
+          : connection.requester_id;
         
-        // Get all accepted connections
-        const acceptedConnections = [
-          ...(sentRequests || []).filter(req => req.status === 'accepted'),
-          ...(requests || []).filter(req => req.status === 'accepted')
-        ];
-        
-        // Create array of conversation objects
-        const conversationsArray: Conversation[] = [];
-        
-        for (const connection of acceptedConnections) {
-          // Determine the other user in the connection
-          const otherUserId = connection.requester_id === user.id 
-            ? connection.recipient_id 
-            : connection.requester_id;
+        const profile = connection.requester_id === user.id 
+          ? connection.recipient 
+          : connection.requester;
           
-          const profile = connection.requester_id === user.id 
-            ? connection.recipient 
-            : connection.requester;
-            
-          if (!profile) continue;
-          
-          // Get last message for this connection
-          const { data: messageData, error: messageError } = await supabase
-            .from("messages")
-            .select("*")
-            .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
-            .order("created_at", { ascending: false })
-            .limit(1);
-            
-          if (messageError) throw messageError;
-            
-          // Get unread count
-          const { count: unreadCount, error: countError } = await supabase
-            .from("messages")
-            .select("*", { count: "exact" })
-            .eq("recipient_id", user.id)
-            .eq("sender_id", otherUserId)
-            .eq("read", false);
-            
-          if (countError) throw countError;
-            
-          conversationsArray.push({
-            profile,
-            lastMessage: messageData && messageData.length > 0 ? messageData[0] as Message : null,
-            unreadCount: unreadCount || 0
-          });
-        }
+        if (!profile) continue;
         
-        // Sort conversations by most recent message
-        conversationsArray.sort((a, b) => {
-          const dateA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-          const dateB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-          return dateB - dateA;
+        // Get last message for this connection
+        const { data: messageData, error: messageError } = await supabase
+          .from("messages")
+          .select("*")
+          .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
+          .order("created_at", { ascending: false })
+          .limit(1);
+          
+        if (messageError) throw messageError;
+          
+        // Get unread count
+        const { count: unreadCount, error: countError } = await supabase
+          .from("messages")
+          .select("*", { count: "exact" })
+          .eq("recipient_id", user.id)
+          .eq("sender_id", otherUserId)
+          .eq("read", false);
+          
+        if (countError) throw countError;
+          
+        conversationsArray.push({
+          profile,
+          lastMessage: messageData && messageData.length > 0 ? messageData[0] as Message : null,
+          unreadCount: unreadCount || 0
         });
-        
-        setConversations(conversationsArray);
-        
-        // Check if we should open a specific conversation from URL param
-        if (initialUserId) {
-          const foundProfile = conversationsArray.find(c => c.profile.id === initialUserId);
-          if (foundProfile) {
-            setSelectedConversation(foundProfile);
-          } else {
-            // If we have a userId but no conversation, try to fetch the user profile
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("*")
-              .eq("id", initialUserId)
-              .single();
-              
-            if (profileData) {
-              // Create a new conversation for this user
-              const newConvo = {
-                profile: profileData,
-                lastMessage: null,
-                unreadCount: 0
-              };
-              setSelectedConversation(newConvo);
-              setConversations(prev => [newConvo, ...prev]);
-            }
+      }
+      
+      // Sort conversations by most recent message
+      conversationsArray.sort((a, b) => {
+        const dateA = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
+        const dateB = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+      
+      setConversations(conversationsArray);
+      
+      // Check if we should open a specific conversation from URL param
+      if (initialUserId) {
+        const foundProfile = conversationsArray.find(c => c.profile.id === initialUserId);
+        if (foundProfile) {
+          setSelectedConversation(foundProfile);
+        } else {
+          // If we have a userId but no conversation, try to fetch the user profile
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", initialUserId)
+            .single();
+            
+          if (profileData) {
+            // Create a new conversation for this user
+            const newConvo = {
+              profile: profileData,
+              lastMessage: null,
+              unreadCount: 0
+            };
+            setSelectedConversation(newConvo);
+            setConversations(prev => [newConvo, ...prev]);
           }
         }
-        // If no initial userId but we have conversations, select the first one
-        else if (conversationsArray.length > 0 && !selectedConversation) {
-          setSelectedConversation(conversationsArray[0]);
-        }
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-        toast.error("Failed to load conversations");
-      } finally {
-        setLoading(false);
       }
-    };
-    
+      // If no initial userId but we have conversations, select the first one
+      else if (conversationsArray.length > 0 && !selectedConversation) {
+        setSelectedConversation(conversationsArray[0]);
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      toast.error("Failed to load conversations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Effect for fetching conversations
+  useEffect(() => {
     fetchConversations();
   }, [user, initialUserId, sentRequests, requests, refresh]);
   

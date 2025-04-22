@@ -1,11 +1,12 @@
+
 import AuthPage from '@/pages/AuthPage';
 import Index from '@/pages/Index';
 import NotFound from '@/pages/NotFound';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from './components/ThemeProvider';
-import { Toaster } from "@/components/ui/toaster"
-import MainLayout from '@/layouts/MainLayout';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { Toaster } from "@/components/ui/toaster";
+import MainLayout from './layouts/MainLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 import DashboardPage from '@/pages/DashboardPage';
 import ExplorePostsPage from '@/pages/ExplorePostsPage';
 import DiscoverPage from '@/pages/DiscoverPage';
@@ -45,7 +46,7 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<ProfilePage />} />
-              <Route path="profile/:id" element={<UserProfilePage />} /> {/* Add this new route */}
+              <Route path="profile/:id" element={<UserProfilePage />} /> 
               <Route path="about" element={<AboutPage />} />
               <Route path="contact" element={<ContactPage />} />
               <Route path="faq" element={<FAQPage />} />
