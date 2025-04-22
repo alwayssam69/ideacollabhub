@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, UserPlus, AlertCircle, MessageSquare, Search } from "lucide-react";
@@ -27,7 +28,9 @@ type Conversation = {
 
 export default function MessagesPage() {
   const { user } = useAuth();
-  const { sentRequests, requests } = useConnectionRequests();
+  const [searchParams] = useSearchParams();
+  const initialUserId = searchParams.get('userId');
+  const { sentRequests, requests, refresh } = useConnectionRequests();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -60,16 +63,14 @@ export default function MessagesPage() {
       setLoading(true);
       
       try {
+        // Make sure we have the latest connections data
+        await refresh();
+        
         // Get all accepted connections
         const acceptedConnections = [
           ...(sentRequests || []).filter(req => req.status === 'accepted'),
           ...(requests || []).filter(req => req.status === 'accepted')
         ];
-        
-        if (acceptedConnections.length === 0) {
-          setLoading(false);
-          return;
-        }
         
         // Create array of conversation objects
         const conversationsArray: Conversation[] = [];
@@ -87,24 +88,28 @@ export default function MessagesPage() {
           if (!profile) continue;
           
           // Get last message for this connection
-          const { data: messageData } = await supabase
+          const { data: messageData, error: messageError } = await supabase
             .from("messages")
             .select("*")
             .or(`and(sender_id.eq.${user.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${user.id})`)
             .order("created_at", { ascending: false })
             .limit(1);
             
+          if (messageError) throw messageError;
+            
           // Get unread count
-          const { count: unreadCount } = await supabase
+          const { count: unreadCount, error: countError } = await supabase
             .from("messages")
             .select("*", { count: "exact" })
             .eq("recipient_id", user.id)
             .eq("sender_id", otherUserId)
             .eq("read", false);
             
+          if (countError) throw countError;
+            
           conversationsArray.push({
             profile,
-            lastMessage: messageData && messageData.length > 0 ? messageData[0] : null,
+            lastMessage: messageData && messageData.length > 0 ? messageData[0] as Message : null,
             unreadCount: unreadCount || 0
           });
         }
@@ -118,17 +123,34 @@ export default function MessagesPage() {
         
         setConversations(conversationsArray);
         
-        // Select the first conversation by default if there is one and none is selected
-        if (conversationsArray.length > 0 && !selectedConversation) {
-          setSelectedConversation(conversationsArray[0]);
-        } else if (selectedConversation) {
-          // Update the selected conversation with fresh data
-          const updatedConversation = conversationsArray.find(
-            conv => conv.profile.id === selectedConversation.profile.id
-          );
-          if (updatedConversation) {
-            setSelectedConversation(updatedConversation);
+        // Check if we should open a specific conversation from URL param
+        if (initialUserId) {
+          const foundProfile = conversationsArray.find(c => c.profile.id === initialUserId);
+          if (foundProfile) {
+            setSelectedConversation(foundProfile);
+          } else {
+            // If we have a userId but no conversation, try to fetch the user profile
+            const { data: profileData } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", initialUserId)
+              .single();
+              
+            if (profileData) {
+              // Create a new conversation for this user
+              const newConvo = {
+                profile: profileData,
+                lastMessage: null,
+                unreadCount: 0
+              };
+              setSelectedConversation(newConvo);
+              setConversations(prev => [newConvo, ...prev]);
+            }
           }
+        }
+        // If no initial userId but we have conversations, select the first one
+        else if (conversationsArray.length > 0 && !selectedConversation) {
+          setSelectedConversation(conversationsArray[0]);
         }
       } catch (error) {
         console.error("Error fetching conversations:", error);
@@ -139,7 +161,7 @@ export default function MessagesPage() {
     };
     
     fetchConversations();
-  }, [user, sentRequests, requests, selectedConversation?.profile.id]);
+  }, [user, initialUserId, sentRequests, requests, refresh]);
   
   // Fetch messages for selected conversation
   useEffect(() => {
@@ -161,12 +183,14 @@ export default function MessagesPage() {
         
         // Mark messages as read
         if (selectedConversation.unreadCount > 0) {
-          await supabase
+          const { error: updateError } = await supabase
             .from("messages")
             .update({ read: true })
             .eq("recipient_id", user.id)
             .eq("sender_id", selectedConversation.profile.id)
             .eq("read", false);
+            
+          if (updateError) throw updateError;
             
           // Update unread count in conversations
           setConversations(prev => 
@@ -218,11 +242,10 @@ export default function MessagesPage() {
                 
               // Scroll to bottom to show new message
               setTimeout(scrollToBottom, 100);
+            } else {
+              // If it's not from the current conversation, refresh conversations to update counts
+              fetchConversations();
             }
-            
-            // Refresh conversations to update last message and unread count
-            const { refresh } = useConnectionRequests();
-            refresh();
           }
         )
         .subscribe();
@@ -269,7 +292,7 @@ export default function MessagesPage() {
         setConversations(prev => 
           prev.map(conv => 
             conv.profile.id === selectedConversation.profile.id 
-              ? { ...conv, lastMessage: messageData[0] }
+              ? { ...conv, lastMessage: messageData[0] as Message }
               : conv
           )
         );
@@ -312,7 +335,7 @@ export default function MessagesPage() {
         <MessageSquare className="h-8 w-8 text-primary" />
       </div>
       <h3 className="font-medium text-lg">No conversations yet</h3>
-      <p className="text-muted-foreground text-sm mt-2 mb-4 max-w-xs">
+      <p className="text-sm text-muted-foreground mt-2 mb-4 max-w-xs">
         Connect with people to start chatting with them
       </p>
       <Button asChild className="bg-primary hover:bg-primary/90 transition-all">
@@ -354,7 +377,7 @@ export default function MessagesPage() {
 
   return (
     <div className="container py-8 animate-fade-in">
-      <h1 className="text-3xl font-bold mb-8 text-gradient-primary">Messages</h1>
+      <h1 className="text-3xl font-bold mb-8">Messages</h1>
 
       <div className="border rounded-lg overflow-hidden grid grid-cols-1 md:grid-cols-3 h-[calc(100vh-16rem)] shadow-md bg-card/20 backdrop-blur-md">
         {/* Conversation List */}
@@ -392,8 +415,6 @@ export default function MessagesPage() {
                         </AvatarFallback>
                       </Avatar>
                     </div>
-                    {/* Online status indicator - will be implemented later */}
-                    {/* <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span> */}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -451,6 +472,15 @@ export default function MessagesPage() {
                     {selectedConversation.profile.title || "No title"}
                   </p>
                 </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="ml-auto"
+                  onClick={() => navigate(`/profile/${selectedConversation.profile.id}`)}
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  View Profile
+                </Button>
               </div>
 
               {/* Messages */}

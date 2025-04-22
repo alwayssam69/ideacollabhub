@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { type Tables } from "@/integrations/supabase/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useConnectionRequests } from "@/hooks/useConnectionRequests";
 
 type Profile = Tables<"profiles">;
 
@@ -34,9 +36,11 @@ interface Connection {
 export default function ConnectionsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { refresh, respondToRequest } = useConnectionRequests();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingIds, setProcessingIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchConnections = async () => {
@@ -45,6 +49,9 @@ export default function ConnectionsPage() {
       try {
         setLoading(true);
         
+        // Make sure connection data is up to date
+        await refresh();
+        
         const { data: sentConnections, error: sentError } = await supabase
           .from("connections")
           .select(`
@@ -52,7 +59,7 @@ export default function ConnectionsPage() {
             profile:profiles!recipient_id(*)
           `)
           .eq("requester_id", user.id)
-          .neq("status", "rejected");
+          .eq("status", "accepted");
 
         const { data: receivedConnections, error: receivedError } = await supabase
           .from("connections")
@@ -61,12 +68,26 @@ export default function ConnectionsPage() {
             profile:profiles!requester_id(*)
           `)
           .eq("recipient_id", user.id)
-          .neq("status", "rejected");
+          .eq("status", "accepted");
+          
+        const { data: pendingRequests, error: pendingError } = await supabase
+          .from("connections")
+          .select(`
+            *,
+            profile:profiles!requester_id(*)
+          `)
+          .eq("recipient_id", user.id)
+          .eq("status", "pending");
 
-        if (sentError || receivedError) throw sentError || receivedError;
+        if (sentError || receivedError || pendingError) throw sentError || receivedError || pendingError;
 
-        setConnections(sentConnections as unknown as Connection[]);
-        setPendingRequests(receivedConnections as unknown as Connection[]);
+        const allConnections = [
+          ...(sentConnections as unknown as Connection[] || []),
+          ...(receivedConnections as unknown as Connection[] || [])
+        ];
+        
+        setConnections(allConnections);
+        setPendingRequests(pendingRequests as unknown as Connection[] || []);
       } catch (error) {
         console.error("Error fetching connections:", error);
         toast.error("Failed to fetch connections");
@@ -76,18 +97,19 @@ export default function ConnectionsPage() {
     };
 
     fetchConnections();
-  }, [user]);
+  }, [user, refresh]);
 
   const handleAcceptRequest = async (requestId: string) => {
     try {
-      const { error } = await supabase
-        .from("connections")
-        .update({ status: "accepted" })
-        .eq("id", requestId);
-
-      if (error) throw error;
-
-      // Update local state
+      setProcessingIds(prev => [...prev, requestId]);
+      
+      const result = await respondToRequest(requestId, 'accepted');
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
+      // Update local state - move from pending to connections
       const acceptedRequest = pendingRequests.find(req => req.id === requestId);
       if (acceptedRequest) {
         setPendingRequests(prev => prev.filter(req => req.id !== requestId));
@@ -98,24 +120,29 @@ export default function ConnectionsPage() {
     } catch (error) {
       console.error("Error accepting request:", error);
       toast.error("Failed to accept request");
+    } finally {
+      setProcessingIds(prev => prev.filter(id => id !== requestId));
     }
   };
 
   const handleRejectRequest = async (requestId: string) => {
     try {
-      const { error } = await supabase
-        .from("connections")
-        .update({ status: "rejected" })
-        .eq("id", requestId);
-
-      if (error) throw error;
-
+      setProcessingIds(prev => [...prev, requestId]);
+      
+      const result = await respondToRequest(requestId, 'rejected');
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
       // Update local state
       setPendingRequests(prev => prev.filter(req => req.id !== requestId));
       toast.success("Connection request declined");
     } catch (error) {
       console.error("Error rejecting request:", error);
       toast.error("Failed to decline request");
+    } finally {
+      setProcessingIds(prev => prev.filter(id => id !== requestId));
     }
   };
 
@@ -150,14 +177,16 @@ export default function ConnectionsPage() {
               <Card key={connection.id}>
                 <CardHeader>
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12">
+                    <Avatar className="h-12 w-12 cursor-pointer" onClick={() => navigate(`/profile/${connection.profile.id}`)}>
                       <AvatarImage src={connection.profile.avatar_url} alt={connection.profile.full_name || "User"} />
                       <AvatarFallback className="bg-slate-700 text-slate-300">
                         {connection.profile.full_name?.[0]?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{connection.profile.full_name}</CardTitle>
+                      <CardTitle className="text-lg cursor-pointer hover:text-primary" onClick={() => navigate(`/profile/${connection.profile.id}`)}>
+                        {connection.profile.full_name}
+                      </CardTitle>
                       <CardDescription>{connection.profile.title}</CardDescription>
                     </div>
                   </div>
@@ -166,51 +195,22 @@ export default function ConnectionsPage() {
                   <div className="space-y-3">
                     {connection.profile.bio && (
                       <CardDescription className="mt-2 text-gray-600">
-                        {connection.profile.bio}
+                        {connection.profile.bio.length > 100 
+                          ? `${connection.profile.bio.substring(0, 100)}...` 
+                          : connection.profile.bio}
                       </CardDescription>
                     )}
                     {connection.profile.skills && connection.profile.skills.length > 0 && (
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {connection.profile.skills.map((skill, index) => (
+                        {connection.profile.skills.slice(0, 3).map((skill, index) => (
                           <Badge key={index} variant="secondary">
                             {skill}
                           </Badge>
                         ))}
-                      </div>
-                    )}
-                    {connection.profile.looking_for && connection.profile.looking_for.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-sm font-medium text-gray-500">Interested in:</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {connection.profile.looking_for.map((interest, index) => (
-                            <Badge key={index} variant="outline">
-                              {interest}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {(connection.profile.portfolio_url || connection.profile.linkedin_url) && (
-                      <div className="mt-4 flex gap-4">
-                        {connection.profile.portfolio_url && (
-                          <a
-                            href={connection.profile.portfolio_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            Portfolio
-                          </a>
-                        )}
-                        {connection.profile.linkedin_url && (
-                          <a
-                            href={connection.profile.linkedin_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            LinkedIn Profile
-                          </a>
+                        {connection.profile.skills.length > 3 && (
+                          <Badge variant="outline">
+                            +{connection.profile.skills.length - 3} more
+                          </Badge>
                         )}
                       </div>
                     )}
@@ -259,29 +259,36 @@ export default function ConnectionsPage() {
               <Card key={request.id}>
                 <CardHeader>
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-12 w-12">
+                    <Avatar className="h-12 w-12 cursor-pointer" onClick={() => navigate(`/profile/${request.profile.id}`)}>
                       <AvatarImage src={request.profile.avatar_url} alt={request.profile.full_name || "User"} />
                       <AvatarFallback className="bg-slate-700 text-slate-300">
                         {request.profile.full_name?.[0]?.toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-lg">{request.profile.full_name}</CardTitle>
+                      <CardTitle className="text-lg cursor-pointer hover:text-primary" onClick={() => navigate(`/profile/${request.profile.id}`)}>
+                        {request.profile.full_name}
+                      </CardTitle>
                       <CardDescription>{request.profile.title}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {request.profile.skills && (
+                    {request.profile.skills && request.profile.skills.length > 0 && (
                       <div>
                         <div className="text-xs font-medium mb-1">Skills:</div>
                         <div className="flex flex-wrap gap-1">
-                          {request.profile.skills.map((skill) => (
+                          {request.profile.skills.slice(0, 5).map((skill) => (
                             <Badge key={skill} variant="outline" className="text-xs">
                               {skill}
                             </Badge>
                           ))}
+                          {request.profile.skills.length > 5 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{request.profile.skills.length - 5} more
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -305,16 +312,26 @@ export default function ConnectionsPage() {
                     variant="outline"
                     className="border-red-200 hover:bg-red-50 hover:text-red-700"
                     onClick={() => handleRejectRequest(request.id)}
+                    disabled={processingIds.includes(request.id)}
                   >
-                    <X className="mr-2 h-4 w-4" />
+                    {processingIds.includes(request.id) ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <X className="mr-2 h-4 w-4" />
+                    )}
                     Decline
                   </Button>
                   <Button 
                     size="sm" 
                     className="bg-green-600 hover:bg-green-700"
                     onClick={() => handleAcceptRequest(request.id)}
+                    disabled={processingIds.includes(request.id)}
                   >
-                    <Check className="mr-2 h-4 w-4" />
+                    {processingIds.includes(request.id) ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Check className="mr-2 h-4 w-4" />
+                    )}
                     Accept
                   </Button>
                 </CardFooter>

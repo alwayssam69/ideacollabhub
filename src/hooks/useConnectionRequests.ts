@@ -69,19 +69,28 @@ export function useConnectionRequests() {
     
     try {
       // Check if a request already exists
-      const { data: existingRequest } = await supabase
+      const { data: existingRequest, error: checkError } = await supabase
         .from('connections')
         .select('*')
-        .or(`and(requester_id.eq.${user.id},recipient_id.eq.${recipientId}),and(requester_id.eq.${recipientId},recipient_id.eq.${user.id})`);
+        .or(`and(requester_id.eq.${user.id},recipient_id.eq.${recipientId}),and(requester_id.eq.${recipientId},recipient_id.eq.${user.id})`)
+        .maybeSingle();
       
-      if (existingRequest && existingRequest.length > 0) {
-        const status = existingRequest[0].status;
+      if (checkError) throw checkError;
+      
+      if (existingRequest) {
+        const status = existingRequest.status;
         if (status === 'pending') {
           return { error: 'A connection request is already pending' };
         } else if (status === 'accepted') {
           return { error: 'You are already connected with this user' };
-        } else {
-          return { error: 'A connection request already exists between these users' };
+        } else if (status === 'rejected') {
+          // If previously rejected, allow to send again by deleting the old request
+          const { error: deleteError } = await supabase
+            .from('connections')
+            .delete()
+            .eq('id', existingRequest.id);
+            
+          if (deleteError) throw deleteError;
         }
       }
       

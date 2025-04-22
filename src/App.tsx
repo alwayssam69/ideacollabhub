@@ -1,69 +1,64 @@
+import AuthPage from '@/pages/AuthPage';
+import Index from '@/pages/Index';
+import NotFound from '@/pages/NotFound';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from './components/ThemeProvider';
+import { Toaster } from "@/components/ui/toaster"
+import MainLayout from '@/layouts/MainLayout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import DashboardPage from '@/pages/DashboardPage';
+import ExplorePostsPage from '@/pages/ExplorePostsPage';
+import DiscoverPage from '@/pages/DiscoverPage';
+import ProjectsPage from '@/pages/ProjectsPage';
+import ConnectionsPage from '@/pages/ConnectionsPage';
+import MessagesPage from '@/pages/MessagesPage';
+import OnboardingPage from '@/pages/OnboardingPage';
+import NotificationsPage from '@/pages/NotificationsPage';
+import SettingsPage from '@/pages/SettingsPage';
+import ProfilePage from '@/pages/ProfilePage';
+import AboutPage from '@/pages/AboutPage';
+import ContactPage from '@/pages/ContactPage';
+import FAQPage from '@/pages/FAQPage';
+import PrivacyPage from '@/pages/PrivacyPage';
+import TermsPage from '@/pages/TermsPage';
+import PendingRequestsPage from '@/pages/PendingRequestsPage';
+import { QueryProvider } from './components/QueryProvider';
+import UserProfilePage from '@/pages/UserProfilePage';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-
-import MainLayout from "./components/layout/MainLayout";
-import Index from "./pages/Index";
-import AuthPage from "./pages/AuthPage";
-import DiscoverPage from "./pages/DiscoverPage";
-import ProjectsPage from "./pages/ProjectsPage";
-import ConnectionsPage from "./pages/ConnectionsPage";
-import MessagesPage from "./pages/MessagesPage";
-import ProfilePage from "./pages/ProfilePage";
-import NotFound from "./pages/NotFound";
-import OnboardingPage from "./pages/OnboardingPage";
-import DashboardPage from "./pages/DashboardPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import PendingRequestsPage from "./pages/PendingRequestsPage";
-import ExplorePostsPage from "./pages/ExplorePostsPage";
-import SettingsPage from "./pages/SettingsPage";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import AboutPage from "./pages/AboutPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import TermsPage from "./pages/TermsPage";
-import ContactPage from "./pages/ContactPage";
-import FAQPage from "./pages/FAQPage";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-      <BrowserRouter>
-        <TooltipProvider>
+function App() {
+  return (
+    <QueryProvider>
+      <Toaster />
+      <ThemeProvider>
+        <BrowserRouter>
           <Routes>
-            <Route path="/" element={<MainLayout />}>
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route index element={<Index />} />
-              <Route path="discover" element={<ProtectedRoute><DiscoverPage /></ProtectedRoute>} />
-              <Route path="projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-              <Route path="connections" element={<ProtectedRoute><ConnectionsPage /></ProtectedRoute>} />
-              <Route path="messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
-              <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              <Route path="dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-              <Route path="notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-              <Route path="pending-requests" element={<ProtectedRoute><PendingRequestsPage /></ProtectedRoute>} />
-              <Route path="explore-posts" element={<ProtectedRoute><ExplorePostsPage /></ProtectedRoute>} />
-              <Route path="settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="explore" element={<ExplorePostsPage />} />
+              <Route path="discover" element={<DiscoverPage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="connections" element={<ConnectionsPage />} />
+              <Route path="messages" element={<MessagesPage />} />
+              <Route path="onboarding" element={<OnboardingPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="profile/:id" element={<UserProfilePage />} /> {/* Add this new route */}
               <Route path="about" element={<AboutPage />} />
-              <Route path="privacy" element={<PrivacyPage />} />
-              <Route path="terms" element={<TermsPage />} />
               <Route path="contact" element={<ContactPage />} />
               <Route path="faq" element={<FAQPage />} />
+              <Route path="privacy" element={<PrivacyPage />} />
+              <Route path="terms" element={<TermsPage />} />
+              <Route path="pending-requests" element={<PendingRequestsPage />} />
             </Route>
-            <Route path="/auth/:mode" element={<AuthPage />} />
-            <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <Toaster />
-          <Sonner />
-        </TooltipProvider>
-      </BrowserRouter>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryProvider>
+  );
+}
 
 export default App;
