@@ -1,111 +1,149 @@
 
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui";
 import { Plus } from "lucide-react";
-import { useConnectionRequests } from "@/hooks/useConnectionRequests";
-import { FilterDropdowns } from "@/components/explore/FilterDropdowns";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { ProjectList } from "@/components/explore/ProjectList";
 import { useProjects } from "@/hooks/useProjects";
-import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const projectSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  looking_for: z.string(),
+  required_skills: z.array(z.string()).optional(),
+  duration: z.string().optional(),
+});
 
 export default function ExplorePostsPage() {
   const { user } = useAuth();
-  const { refresh: refreshConnections } = useConnectionRequests();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
-  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const { 
+    projects, 
+    loading, 
+    createProject 
+  } = useProjects();
 
-  const { projects, creators, loading } = useProjects(
-    selectedCategory,
-    selectedIndustry,
-    selectedLocation,
-    selectedSkill
-  );
+  const [creators, setCreators] = useState<Record<string, any>>({});
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
+  const form = useForm<z.infer<typeof projectSchema>>({
+    resolver: zodResolver(projectSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      looking_for: "",
+      required_skills: [],
+      duration: "",
+    },
+  });
+
+  const onSubmit = async (data: z.infer<typeof projectSchema>) => {
+    if (!user) {
+      toast.error("You must be logged in to create a project");
+      return;
+    }
+
+    try {
+      await createProject({
+        user_id: user.id,
+        title: data.title,
+        description: data.description,
+        looking_for: data.looking_for,
+        required_skills: data.required_skills,
+        duration: data.duration,
+      });
+      
+      setIsCreateDialogOpen(false);
+      form.reset();
+    } catch (error) {
+      console.error("Project creation error", error);
+    }
+  };
 
   return (
-    <div className="container py-8">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4"
-      >
-        <div>
-          <h1 className="text-3xl font-bold text-gradient-primary">Explore Projects</h1>
-          <p className="text-muted-foreground mt-1">
-            Discover projects and collaborate with others
-          </p>
-        </div>
-        <Button className="shrink-0 bg-primary hover:bg-primary/90 transition-all shadow hover:shadow-md hover:scale-105">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Project
-        </Button>
-      </motion.div>
-
-      <div className="mb-6">
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-6 bg-muted/50 backdrop-blur-sm">
-            <TabsTrigger value="all" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">All Projects</TabsTrigger>
-            <TabsTrigger value="startup" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Startup Ideas</TabsTrigger>
-            <TabsTrigger value="freelance" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Freelance Tasks</TabsTrigger>
-            <TabsTrigger value="hackathon" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Hackathon</TabsTrigger>
-            <TabsTrigger value="research" className="transition-all data-[state=active]:bg-primary data-[state=active]:text-white">Research</TabsTrigger>
-          </TabsList>
-          
-          <FilterDropdowns
-            selectedCategory={selectedCategory}
-            setSelectedCategory={setSelectedCategory}
-            selectedIndustry={selectedIndustry}
-            setSelectedIndustry={setSelectedIndustry}
-            selectedLocation={selectedLocation}
-            setSelectedLocation={setSelectedLocation}
-            selectedSkill={selectedSkill}
-            setSelectedSkill={setSelectedSkill}
-          />
-          
-          <TabsContent value="all" className="mt-0">
-            <ProjectList
-              loading={loading}
-              projects={projects}
-              creators={creators}
-            />
-          </TabsContent>
-          
-          <TabsContent value="startup">
-            <ProjectList
-              loading={loading}
-              projects={projects.filter(p => p.duration === "startup")}
-              creators={creators}
-            />
-          </TabsContent>
-          
-          <TabsContent value="freelance">
-            <ProjectList
-              loading={loading}
-              projects={projects.filter(p => p.duration === "freelance")}
-              creators={creators}
-            />
-          </TabsContent>
-          
-          <TabsContent value="hackathon">
-            <ProjectList
-              loading={loading}
-              projects={projects.filter(p => p.duration === "hackathon")}
-              creators={creators}
-            />
-          </TabsContent>
-          
-          <TabsContent value="research">
-            <ProjectList
-              loading={loading}
-              projects={projects.filter(p => p.duration === "research")}
-              creators={creators}
-            />
-          </TabsContent>
-        </Tabs>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Explore Projects</h1>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" /> Create Project
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Project</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="looking_for"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Looking For</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select what you're looking for" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Co-Founder">Co-Founder</SelectItem>
+                          <SelectItem value="Team Members">Team Members</SelectItem>
+                          <SelectItem value="Mentorship">Mentorship</SelectItem>
+                          <SelectItem value="Funding">Funding</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full">Create Project</Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
+      <ProjectList 
+        loading={loading} 
+        projects={projects} 
+        creators={creators} 
+      />
     </div>
   );
 }

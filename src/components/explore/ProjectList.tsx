@@ -2,7 +2,7 @@
 import { LoadingSkeleton } from "./LoadingSkeleton";
 import { EmptyPostsState } from "./EmptyState";
 import { ProjectCard } from "./ProjectCard";
-import type { Project, Profile } from "@/hooks/useProjects";
+import type { Project, Profile } from "@/types/project";
 
 interface ProjectListProps {
   loading: boolean;
@@ -10,7 +10,11 @@ interface ProjectListProps {
   creators: Record<string, Profile>;
 }
 
-export function ProjectList({ loading, projects, creators }: ProjectListProps) {
+export function ProjectList({ 
+  loading, 
+  projects, 
+  creators 
+}: ProjectListProps) {
   if (loading) {
     return <LoadingSkeleton />;
   }
