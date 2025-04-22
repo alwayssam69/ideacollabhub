@@ -1,46 +1,23 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from '@/context/AuthContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { MessageProvider } from '@/context/MessageContext';
-import PrivateRoute from '@/components/PrivateRoute';
-import Dashboard from '@/pages/Dashboard';
-import Login from '@/pages/Login';
-import Onboarding from '@/pages/Onboarding';
-
-import MainLayout from "./components/layout/MainLayout";
-import Index from "./pages/Index";
-import AuthPage from "./pages/AuthPage";
-import DiscoverPage from "./pages/DiscoverPage";
-import ProjectsPage from "./pages/ProjectsPage";
-import ConnectionsPage from "./pages/ConnectionsPage";
-import MessagesPage from "./pages/MessagesPage";
-import ProfilePage from "./pages/ProfilePage";
-import NotFound from "./pages/NotFound";
-import OnboardingPage from "./pages/OnboardingPage";
-import DashboardPage from "./pages/DashboardPage";
-import NotificationsPage from "./pages/NotificationsPage";
-import PendingRequestsPage from "./pages/PendingRequestsPage";
-import ExplorePostsPage from "./pages/ExplorePostsPage";
-import SettingsPage from "./pages/SettingsPage";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import AboutPage from "./pages/AboutPage";
-import PrivacyPage from "./pages/PrivacyPage";
-import TermsPage from "./pages/TermsPage";
-import ContactPage from "./pages/ContactPage";
-import FAQPage from "./pages/FAQPage";
-import { useOnboarding } from "@/hooks/useOnboarding";
 import { useAuth } from '@/hooks/useAuth';
-import { AuthForm } from '@/components/auth/AuthForm';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import { Loader2 } from 'lucide-react';
+import { Toaster } from 'sonner';
+
+// Pages
+import AuthPage from "./pages/AuthPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
+import DashboardPage from "./pages/DashboardPage";
+import MainLayout from "./components/layout/MainLayout";
 
 const queryClient = new QueryClient();
 
-const AppContent = () => {
+function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const { loading: onboardingLoading } = useOnboarding();
 
@@ -60,7 +37,7 @@ const AppContent = () => {
       />
       <Route
         path="/auth"
-        element={user ? <Navigate to="/dashboard" /> : <AuthForm />}
+        element={user ? <Navigate to="/dashboard" /> : <AuthPage />}
       />
       <Route
         path="/onboarding"
@@ -68,13 +45,17 @@ const AppContent = () => {
       />
       <Route
         path="/dashboard"
-        element={user ? <DashboardPage /> : <Navigate to="/auth" />}
+        element={
+          <MainLayout>
+            <DashboardPage />
+          </MainLayout>
+        }
       />
     </Routes>
   );
-};
+}
 
-const App = () => {
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
@@ -82,11 +63,8 @@ const App = () => {
           <ConnectionProvider>
             <MessageProvider>
               <BrowserRouter>
-                <TooltipProvider>
-                  <AppContent />
-                  <Toaster />
-                  <Sonner />
-                </TooltipProvider>
+                <AppContent />
+                <Toaster />
               </BrowserRouter>
             </MessageProvider>
           </ConnectionProvider>
@@ -94,6 +72,6 @@ const App = () => {
       </ThemeProvider>
     </QueryClientProvider>
   );
-};
+}
 
 export default App;

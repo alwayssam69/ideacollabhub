@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
 export function useOnboarding() {
-  const { user } = useAuth();
-  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
-    async function checkOnboarding() {
+    async function checkOnboardingStatus() {
       if (!user) {
         setLoading(false);
         return;
@@ -25,24 +25,22 @@ export function useOnboarding() {
 
         if (error) throw error;
 
-        setNeedsOnboarding(!data?.onboarding_completed);
-        
         if (!data?.onboarding_completed) {
+          setNeedsOnboarding(true);
           navigate('/onboarding');
+        } else {
+          setNeedsOnboarding(false);
+          navigate('/dashboard');
         }
       } catch (error) {
         console.error('Error checking onboarding status:', error);
-        setNeedsOnboarding(null);
       } finally {
         setLoading(false);
       }
     }
 
-    checkOnboarding();
+    checkOnboardingStatus();
   }, [user, navigate]);
 
-  return {
-    needsOnboarding,
-    loading,
-  };
+  return { loading, needsOnboarding };
 } 
