@@ -30,12 +30,21 @@ export const useProjects = () => {
 
   const createProject = async (projectData: Omit<Project, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Remove any fields that don't exist in the database schema
+      const { title, description, user_id, looking_for, required_skills, duration } = projectData;
+      
+      const validProjectData = {
+        title,
+        description,
+        user_id,
+        looking_for: looking_for || '', 
+        required_skills,
+        duration
+      };
+      
       const { data, error } = await supabase
         .from('projects')
-        .insert({
-          ...projectData,
-          looking_for: projectData.looking_for || '',
-        })
+        .insert(validProjectData)
         .select()
         .single();
 
