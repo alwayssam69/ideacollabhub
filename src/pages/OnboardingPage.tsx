@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
+import { Form, FormField } from "@/components/ui/form";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -46,7 +46,7 @@ export default function OnboardingPage() {
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const { updateProfile } = useProfile();
 
-  const form = useForm<z.infer<typeof professionalInfoSchema>>({
+  const form = useForm<OnboardingFormData>({
     resolver: zodResolver(professionalInfoSchema),
     defaultValues: {
       fullName: "",
@@ -63,7 +63,6 @@ export default function OnboardingPage() {
       motivation: "",
       linkedin_url: "",
       portfolio_url: "",
-      profilePhoto: undefined,
     },
   });
 
@@ -74,7 +73,7 @@ export default function OnboardingPage() {
     setAvailableSkills(SKILLS_BY_INDUSTRY[value as keyof typeof SKILLS_BY_INDUSTRY] || []);
   };
 
-  const onSubmit = async (data: z.infer<typeof professionalInfoSchema>) => {
+  const onSubmit = async (data: OnboardingFormData) => {
     setIsSubmitting(true);
 
     try {

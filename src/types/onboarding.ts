@@ -14,4 +14,5 @@ export interface OnboardingFormData {
   linkedin_url?: string;
   portfolio_url?: string;
   bio?: string;
+  profilePhoto?: File;
 }
