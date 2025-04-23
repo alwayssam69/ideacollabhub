@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -14,7 +15,6 @@ export const useProfile = () => {
 
   const fetchProfile = async () => {
     if (!user) {
-      setError('User not authenticated');
       setLoading(false);
       return;
     }
@@ -30,7 +30,6 @@ export const useProfile = () => {
       if (error) throw error;
 
       setProfile(data);
-      setError(null);
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
@@ -43,28 +42,31 @@ export const useProfile = () => {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) {
       toast.error('User not authenticated');
-      return;
+      return { error: new Error('User not authenticated') };
     }
 
     try {
       setLoading(true);
       const { error } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: user.id,
           ...updates,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', user.id);
+        .select()
+        .single();
 
       if (error) throw error;
 
       // Refresh profile data
       await fetchProfile();
       toast.success('Profile updated successfully');
+      return { error: null };
     } catch (err) {
       console.error('Error updating profile:', err);
       toast.error('Failed to update profile');
-      throw err;
+      return { error: err instanceof Error ? err : new Error('Failed to update profile') };
     } finally {
       setLoading(false);
     }

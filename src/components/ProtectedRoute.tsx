@@ -2,11 +2,12 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { OnboardingCheck } from "./OnboardingCheck";
 
 const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   
-  // If still loading authentication state, you can show a loading spinner
+  // If still loading authentication state, show a loading spinner
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -15,13 +16,13 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
     );
   }
   
-  // Redirect to sign in if not authenticated
+  // Redirect to auth if not authenticated
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
   
-  // Render children if authenticated
-  return <>{children}</>;
+  // Check onboarding status for authenticated users
+  return <OnboardingCheck>{children}</OnboardingCheck>;
 };
 
 export default ProtectedRoute;

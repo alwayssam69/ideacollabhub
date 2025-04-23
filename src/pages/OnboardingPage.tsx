@@ -30,7 +30,6 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
 
-// Constants for dropdown options
 const INDUSTRY_OPTIONS = [
   "Technology",
   "Education",
@@ -66,7 +65,6 @@ const SKILLS_BY_INDUSTRY = {
     "Special Education",
     "E-learning Development"
   ],
-  // Add other industries as needed
 };
 
 const PURPOSE_OPTIONS = [
@@ -92,7 +90,6 @@ const MEETING_PREFERENCE_OPTIONS = [
   "Either"
 ];
 
-// Step schemas
 const professionalInfoSchema = z.object({
   industry: z.string().min(1, "Industry is required"),
   skills: z.array(z.string()).min(1, "Please select at least one skill"),
@@ -129,7 +126,6 @@ export default function OnboardingPage() {
     form.setValue("industry", value);
     form.setValue("skills", []);
     
-    // Update available skills based on selected industry
     setAvailableSkills(SKILLS_BY_INDUSTRY[value as keyof typeof SKILLS_BY_INDUSTRY] || []);
   };
 
@@ -189,21 +185,21 @@ export default function OnboardingPage() {
         preferred_industries: [data.industry],
         preferred_project_types: data.purposes,
         motivation: data.bio,
-        avatar_url: avatarUrl
+        avatar_url: avatarUrl || undefined
       };
 
       const { error } = await supabase
         .from('profiles')
-        .update(profileData)
-        .eq('id', user.id);
+        .upsert(profileData)
+        .select()
+        .single();
 
       if (error) {
-        console.error('Detailed error:', error);
         throw error;
       }
 
       toast.success("Profile completed successfully!");
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error(
