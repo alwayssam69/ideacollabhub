@@ -14,7 +14,9 @@ export function OnboardingCheck({ children }: { children: React.ReactNode }) {
       const isOnboardingComplete = Boolean(
         profile.industry &&
         profile.role &&
-        profile.skills?.length > 0
+        profile.skills?.length > 0 &&
+        profile.stage &&
+        profile.looking_for?.length > 0
       );
 
       if (!isOnboardingComplete) {

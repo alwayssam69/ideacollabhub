@@ -2,12 +2,16 @@
 export interface OnboardingFormData {
   fullName: string;
   stage: string;
-  location: string;
   industry: string;
+  role: string;
   skills: string[];
-  purposes: string[];
-  availability: string;
-  meetingPreference: string;
-  bio: string;
-  avatar?: File | null;
+  looking_for: string[];
+  project_stage?: string;
+  project_description?: string;
+  preferred_industries?: string[];
+  preferred_project_types?: string[];
+  motivation?: string;
+  linkedin_url?: string;
+  portfolio_url?: string;
+  bio?: string;
 }

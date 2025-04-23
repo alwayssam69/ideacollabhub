@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -23,7 +22,7 @@ export const useProfile = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, looking_for, skills, preferred_industries, preferred_project_types')
         .eq('id', user.id)
         .single();
 
@@ -83,4 +82,4 @@ export const useProfile = () => {
     fetchProfile,
     updateProfile,
   };
-}; 
+};

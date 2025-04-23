@@ -226,7 +226,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_profile_completion: {
+        Args: { profile_row: Database["public"]["Tables"]["profiles"]["Row"] }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
