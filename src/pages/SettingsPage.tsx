@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 const accountFormSchema = z.object({
   email: z.string().email({
@@ -62,6 +64,7 @@ export default function SettingsPage() {
     },
   });
   
+  // Separate form for password updates
   const passwordForm = useForm({
     defaultValues: {
       current_password: "",
@@ -224,7 +227,7 @@ export default function SettingsPage() {
             <CardContent>
               <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
                 <div className="space-y-2">
-                  <FormLabel>Current Password</FormLabel>
+                  <Label htmlFor="current_password">Current Password</Label>
                   <Input
                     id="current_password"
                     type="password"
@@ -232,7 +235,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <FormLabel>New Password</FormLabel>
+                  <Label htmlFor="new_password">New Password</Label>
                   <Input
                     id="new_password"
                     type="password"
@@ -240,7 +243,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <FormLabel>Confirm New Password</FormLabel>
+                  <Label htmlFor="confirm_password">Confirm New Password</Label>
                   <Input
                     id="confirm_password"
                     type="password"
