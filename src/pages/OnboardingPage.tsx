@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,25 +26,36 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
+import { 
+  STAGE_OPTIONS, 
+  INDUSTRY_OPTIONS, 
+  PURPOSE_OPTIONS, 
+  PROJECT_STAGE_OPTIONS 
+} from "@/constants/onboardingOptions";
 
-const INDUSTRY_OPTIONS = [
-  "Technology",
-  "Education",
-  "Healthcare",
-  "Finance",
-  "Marketing",
-  "Design",
-  "Media",
-  "Entertainment",
-  "Manufacturing",
-  "Retail",
-  "Other"
-];
+const professionalInfoSchema = z.object({
+  fullName: z.string().min(1, "Name is required"),
+  stage: z.string().min(1, "Stage is required"),
+  industry: z.string().min(1, "Industry is required"),
+  role: z.string().min(1, "Role is required"),
+  skills: z.array(z.string()).min(1, "Please select at least one skill"),
+  looking_for: z.array(z.string()).min(1, "Please select at least one purpose"),
+  project_stage: z.string().optional(),
+  project_description: z.string().optional(),
+  preferred_industries: z.array(z.string()).optional(),
+  preferred_project_types: z.array(z.string()).optional(),
+  bio: z.string().optional(),
+  motivation: z.string().optional(),
+  linkedin_url: z.string().optional(),
+  portfolio_url: z.string().optional(),
+  profilePhoto: z.instanceof(File).optional(),
+});
 
+// Set of skills based on selected industry
 const SKILLS_BY_INDUSTRY = {
   "Technology": [
     "Web Development",
@@ -56,6 +68,15 @@ const SKILLS_BY_INDUSTRY = {
     "Blockchain",
     "Cybersecurity"
   ],
+  "Healthcare": [
+    "Medical Research",
+    "Healthcare Administration",
+    "Nursing",
+    "Pharmaceuticals",
+    "Telemedicine",
+    "Medical Devices",
+    "Patient Care"
+  ],
   "Education": [
     "Teaching",
     "Curriculum Development",
@@ -65,40 +86,79 @@ const SKILLS_BY_INDUSTRY = {
     "Special Education",
     "E-learning Development"
   ],
+  "Finance": [
+    "Financial Analysis",
+    "Investment Banking",
+    "Accounting",
+    "Financial Planning",
+    "Risk Management",
+    "Fintech",
+    "Insurance"
+  ],
+  "Marketing": [
+    "Digital Marketing",
+    "Content Marketing",
+    "SEO/SEM",
+    "Social Media Marketing",
+    "Market Research",
+    "Brand Management",
+    "Email Marketing"
+  ],
+  "Design": [
+    "Graphic Design",
+    "Product Design",
+    "UX/UI Design",
+    "Industrial Design",
+    "Brand Identity",
+    "Web Design",
+    "Animation"
+  ],
+  "Media & Entertainment": [
+    "Film Production",
+    "Music Production",
+    "Game Development",
+    "Photography",
+    "Content Creation",
+    "Social Media",
+    "Digital Media"
+  ],
+  "E-commerce": [
+    "Online Store Management",
+    "Supply Chain",
+    "Customer Service",
+    "Digital Marketing",
+    "Inventory Management",
+    "Marketplace Integration",
+    "User Experience"
+  ],
+  "Manufacturing": [
+    "Production Management",
+    "Quality Control",
+    "Supply Chain",
+    "Logistics",
+    "Industrial Engineering",
+    "Procurement",
+    "Process Optimization"
+  ],
+  "Sustainability": [
+    "Environmental Science",
+    "Renewable Energy",
+    "Sustainable Development",
+    "Conservation",
+    "Green Building",
+    "Climate Policy",
+    "Circular Economy"
+  ],
+  "Other": [
+    "Project Management",
+    "Business Development",
+    "Human Resources",
+    "Legal",
+    "Customer Service",
+    "Public Relations",
+    "Consulting"
+  ]
 };
-
-const PURPOSE_OPTIONS = [
-  "Join Projects",
-  "Find Mentor",
-  "Startup Team",
-  "General Networking",
-  "Learning Opportunities",
-  "Freelance Work"
-];
-
-const AVAILABILITY_OPTIONS = [
-  "Weekdays",
-  "Weekends",
-  "Evenings",
-  "Flexible",
-  "Limited Availability"
-];
-
-const MEETING_PREFERENCE_OPTIONS = [
-  "Virtual",
-  "In-Person",
-  "Either"
-];
-
-const professionalInfoSchema = z.object({
-  industry: z.string().min(1, "Industry is required"),
-  skills: z.array(z.string()).min(1, "Please select at least one skill"),
-  purposes: z.array(z.string()).min(1, "Please select at least one purpose"),
-  availability: z.string().min(1, "Availability is required"),
-  meetingPreference: z.string().min(1, "Meeting preference is required"),
-  bio: z.string().min(10, "Bio should be at least 10 characters"),
-  profilePhoto: z.instanceof(File).optional(),
-});
 
 export default function OnboardingPage() {
   const { user } = useAuth();
@@ -111,12 +171,20 @@ export default function OnboardingPage() {
   const form = useForm<z.infer<typeof professionalInfoSchema>>({
     resolver: zodResolver(professionalInfoSchema),
     defaultValues: {
+      fullName: "",
+      stage: "",
       industry: "",
+      role: "",
       skills: [],
-      purposes: [],
-      availability: "",
-      meetingPreference: "",
+      looking_for: [],
+      project_stage: "",
+      project_description: "",
+      preferred_industries: [],
+      preferred_project_types: [],
       bio: "",
+      motivation: "",
+      linkedin_url: "",
+      portfolio_url: "",
       profilePhoto: undefined,
     },
   });
@@ -127,15 +195,6 @@ export default function OnboardingPage() {
     form.setValue("skills", []);
     
     setAvailableSkills(SKILLS_BY_INDUSTRY[value as keyof typeof SKILLS_BY_INDUSTRY] || []);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      form.setValue("profilePhoto", file);
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-    }
   };
 
   const uploadProfilePhoto = async (file: File, userId: string) => {
@@ -172,19 +231,25 @@ export default function OnboardingPage() {
         avatarUrl = await uploadProfilePhoto(data.profilePhoto, user.id);
       }
 
+      // Map form data to the profile structure expected by the database
       const profileData = {
         id: user.id,
+        full_name: data.fullName,
+        stage: data.stage,
         industry: data.industry,
+        role: data.role,
         skills: data.skills,
-        looking_for: data.purposes,
-        availability: data.availability,
-        meeting_preference: data.meetingPreference,
+        looking_for: data.looking_for,
+        project_stage: data.project_stage,
+        project_description: data.project_description,
+        preferred_industries: data.preferred_industries || [data.industry],
+        preferred_project_types: data.preferred_project_types || data.looking_for,
         bio: data.bio,
+        motivation: data.motivation,
+        linkedin_url: data.linkedin_url,
+        portfolio_url: data.portfolio_url,
         onboarding_completed: true,
         updated_at: new Date().toISOString(),
-        preferred_industries: [data.industry],
-        preferred_project_types: data.purposes,
-        motivation: data.bio,
         avatar_url: avatarUrl || undefined
       };
 
@@ -230,6 +295,24 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-1 gap-8">
                   <FormField
                     control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">Full Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Your full name"
+                            className="h-11 bg-slate-800 border-slate-700 text-slate-200"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="profilePhoto"
                     render={({ field }) => (
                       <FormItem className="flex flex-col items-center">
@@ -245,6 +328,34 @@ export default function OnboardingPage() {
                           }}
                           size="lg"
                         />
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">I am a...</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
+                              <SelectValue placeholder="Select your role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="bg-slate-800 border-slate-700">
+                            {STAGE_OPTIONS.map((option) => (
+                              <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
+                                {option}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage className="text-xs text-red-400" />
                       </FormItem>
                     )}
@@ -276,6 +387,24 @@ export default function OnboardingPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage className="text-xs text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-300">Your Role</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. Software Developer, UX Designer, Marketing Manager"
+                            className="h-11 bg-slate-800 border-slate-700 text-slate-200"
+                            {...field} 
+                          />
+                        </FormControl>
                         <FormMessage className="text-xs text-red-400" />
                       </FormItem>
                     )}
@@ -328,7 +457,7 @@ export default function OnboardingPage() {
 
                   <FormField
                     control={form.control}
-                    name="purposes"
+                    name="looking_for"
                     render={() => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium text-slate-300">What are you looking for?</FormLabel>
@@ -337,7 +466,7 @@ export default function OnboardingPage() {
                             <FormField
                               key={purpose}
                               control={form.control}
-                              name="purposes"
+                              name="looking_for"
                               render={({ field }) => (
                                 <FormItem
                                   key={purpose}
@@ -371,63 +500,55 @@ export default function OnboardingPage() {
                     )}
                   />
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="availability"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium text-slate-300">Availability</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
-                                <SelectValue placeholder="Select your availability" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="bg-slate-800 border-slate-700">
-                              {AVAILABILITY_OPTIONS.map((option) => (
-                                <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs text-red-400" />
-                        </FormItem>
-                      )}
-                    />
+                  {form.watch("stage") === "Founder" && (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name="project_stage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-slate-300">Project Stage</FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
+                                  <SelectValue placeholder="Select your project stage" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="bg-slate-800 border-slate-700">
+                                {PROJECT_STAGE_OPTIONS.map((option) => (
+                                  <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-xs text-red-400" />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="meetingPreference"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-medium text-slate-300">Meeting Preference</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
+                      <FormField
+                        control={form.control}
+                        name="project_description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-sm font-medium text-slate-300">Project Description</FormLabel>
                             <FormControl>
-                              <SelectTrigger className="h-11 bg-slate-800 border-slate-700 text-slate-200">
-                                <SelectValue placeholder="Select your preference" />
-                              </SelectTrigger>
+                              <Textarea
+                                placeholder="Briefly describe your project or startup idea..."
+                                className="min-h-[120px] resize-none bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-400"
+                                {...field}
+                              />
                             </FormControl>
-                            <SelectContent className="bg-slate-800 border-slate-700">
-                              {MEETING_PREFERENCE_OPTIONS.map((option) => (
-                                <SelectItem key={option} value={option} className="text-slate-200 hover:bg-slate-700">
-                                  {option}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-xs text-red-400" />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                            <FormMessage className="text-xs text-red-400" />
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  )}
 
                   <FormField
                     control={form.control}
@@ -446,6 +567,44 @@ export default function OnboardingPage() {
                       </FormItem>
                     )}
                   />
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <FormField
+                      control={form.control}
+                      name="linkedin_url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-slate-300">LinkedIn URL (optional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://linkedin.com/in/yourusername"
+                              className="h-11 bg-slate-800 border-slate-700 text-slate-200"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage className="text-xs text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="portfolio_url"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-slate-300">Portfolio URL (optional)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="https://yourportfolio.com"
+                              className="h-11 bg-slate-800 border-slate-700 text-slate-200"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage className="text-xs text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
 
                 <CardFooter className="flex justify-end px-0 pt-4">
