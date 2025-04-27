@@ -1,13 +1,15 @@
 
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { toast } from "sonner";
 
 export function OnboardingCheck({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { profile, loading } = useProfile();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && user && profile) {
@@ -24,11 +26,13 @@ export function OnboardingCheck({ children }: { children: React.ReactNode }) {
 
       console.log("Is onboarding complete:", isOnboardingComplete);
 
-      if (!isOnboardingComplete) {
-        navigate("/onboarding");
+      // Only redirect if we're not already on the onboarding page
+      if (!isOnboardingComplete && location.pathname !== "/onboarding") {
+        toast.info("Please complete your profile before continuing");
+        navigate("/onboarding", { replace: true });
       }
     }
-  }, [user, profile, loading, navigate]);
+  }, [user, profile, loading, navigate, location.pathname]);
 
   if (loading) {
     return (

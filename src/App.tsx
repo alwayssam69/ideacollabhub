@@ -2,7 +2,7 @@
 import AuthPage from '@/pages/AuthPage';
 import Index from '@/pages/Index';
 import NotFound from '@/pages/NotFound';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Toaster } from "@/components/ui/toaster";
 import MainLayout from './layouts/MainLayout';
@@ -33,17 +33,24 @@ function App() {
       <ThemeProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/auth" element={<AuthPage />} />
+            {/* Auth routes - don't need protection */}
             <Route path="/auth/:mode" element={<AuthPage />} />
+            <Route path="/auth" element={<Navigate to="/auth/signin" replace />} />
+            
+            {/* Special case for onboarding - less strict protection */}
+            <Route path="/onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+            
+            {/* Public landing page */}
+            <Route path="/" element={<Index />} />
+            
+            {/* Protected application routes */}
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-              <Route index element={<Index />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="explore" element={<ExplorePostsPage />} />
               <Route path="discover" element={<DiscoverPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="connections" element={<ConnectionsPage />} />
               <Route path="messages" element={<MessagesPage />} />
-              <Route path="onboarding" element={<OnboardingPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<ProfilePage />} />
@@ -55,6 +62,8 @@ function App() {
               <Route path="terms" element={<TermsPage />} />
               <Route path="pending-requests" element={<PendingRequestsPage />} />
             </Route>
+            
+            {/* 404 catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

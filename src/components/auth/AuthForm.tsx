@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 type AuthMode = "signin" | "signup";
 
@@ -36,6 +36,10 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
   const [authMode, setAuthMode] = useState<AuthMode>(mode);
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get return URL from location state or default to dashboard
+  const from = location.state?.from || "/dashboard";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,10 +60,10 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
           toast.success("Welcome back!", {
             description: "You have successfully signed in.",
           });
-          navigate('/');
+          navigate(from);
         } else {
           toast.error("Sign in failed", {
-            description: error,
+            description: error || "Please check your credentials and try again",
           });
         }
       } else {
@@ -67,12 +71,12 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
         
         if (success) {
           toast.success("Welcome to IdeaCollabHub!", {
-            description: "Your account has been created successfully. Please check your email to verify your account.",
+            description: "Your account has been created successfully. You'll be redirected to complete your profile.",
           });
           navigate('/onboarding');
         } else {
           toast.error("Sign up failed", {
-            description: error,
+            description: error || "Please try a different email or check your connection",
           });
         }
       }
@@ -112,7 +116,7 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="you@example.com" {...field} />
+                  <Input placeholder="you@example.com" {...field} autoComplete="email" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -125,7 +129,12 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="********" {...field} />
+                  <Input 
+                    type="password" 
+                    placeholder="********" 
+                    {...field} 
+                    autoComplete={authMode === "signin" ? "current-password" : "new-password"} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

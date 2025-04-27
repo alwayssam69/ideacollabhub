@@ -22,15 +22,20 @@ export default function Header() {
   const navigate = useNavigate();
   
   const handleSignOut = async () => {
-    const { success, error } = await signOut();
-    
-    if (success) {
-      toast.success("Signed out successfully");
-      navigate('/auth/signin');
-    } else {
-      toast.error("Sign out failed", {
-        description: error
-      });
+    try {
+      const { success, error } = await signOut();
+      
+      if (success) {
+        toast.success("Signed out successfully");
+        navigate('/auth/signin');
+      } else {
+        toast.error("Sign out failed", {
+          description: error || "An unexpected error occurred"
+        });
+      }
+    } catch (err) {
+      console.error("Sign out error:", err);
+      toast.error("Sign out failed");
     }
   };
 
@@ -44,7 +49,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-2">
-          <Link to="/" className="flex items-center gap-2 text-2xl font-bold">
+          <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 text-2xl font-bold">
             <Sparkles className="h-6 w-6 text-primary" />
             <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
               IdeaCollabHub
@@ -53,106 +58,128 @@ export default function Header() {
         </div>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                location.pathname === item.path
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        {user && (
+          <nav className="hidden md:flex items-center gap-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  location.pathname === item.path
+                    ? "text-primary"
+                    : "text-muted-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         {/* User Menu & Actions */}
         <div className="flex items-center gap-3">
-          {/* Notifications */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="relative h-9 w-9 rounded-full hover:bg-muted/50"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-background"></span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <div className="py-2 px-4 text-sm">
-                <p className="text-muted-foreground">No new notifications</p>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {user ? (
+            <>
+              {/* Notifications */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full hover:bg-muted/50"
+                  >
+                    <Bell className="h-5 w-5" />
+                    <span className="absolute top-1 right-1 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-background"></span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80">
+                  <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <div className="py-2 px-4 text-sm">
+                    <p className="text-muted-foreground">No new notifications</p>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-          {/* Messages */}
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-9 w-9 rounded-full hover:bg-muted/50"
-            asChild
-          >
-            <Link to="/messages">
-              <MessageSquare className="h-5 w-5" />
-            </Link>
-          </Button>
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+              {/* Messages */}
               <Button
                 size="icon"
                 variant="ghost"
                 className="h-9 w-9 rounded-full hover:bg-muted/50"
+                asChild
               >
-                <User className="h-5 w-5" />
+                <Link to="/messages">
+                  <MessageSquare className="h-5 w-5" />
+                </Link>
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/profile" className="cursor-pointer">
-                  My Profile
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/settings" className="cursor-pointer">
-                  Settings
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="cursor-pointer text-red-500 focus:text-red-500"
-                onClick={handleSignOut}
-              >
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+              {/* User Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-9 w-9 rounded-full hover:bg-muted/50"
+                  >
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="cursor-pointer w-full">
+                      My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard" className="cursor-pointer w-full">
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer w-full">
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer text-red-500 focus:text-red-500"
+                    onClick={handleSignOut}
+                  >
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" asChild>
+                <Link to="/auth/signin">Sign in</Link>
+              </Button>
+              <Button asChild>
+                <Link to="/auth/signup">Sign up</Link>
+              </Button>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full md:hidden hover:bg-muted/50"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          {user && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full md:hidden hover:bg-muted/50"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Mobile Navigation */}
-      {mobileMenuOpen && (
+      {user && mobileMenuOpen && (
         <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur animate-fade-in">
           <nav className="flex flex-col space-y-1 p-2">
             {navItems.map((item) => (
