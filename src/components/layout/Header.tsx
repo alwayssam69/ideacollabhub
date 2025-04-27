@@ -1,6 +1,7 @@
+
 import { useState } from "react";
 import { Bell, Menu, MessageSquare, User, Sparkles } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,10 +12,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  
+  const handleSignOut = async () => {
+    const { success, error } = await signOut();
+    
+    if (success) {
+      toast.success("Signed out successfully");
+      navigate('/auth/signin');
+    } else {
+      toast.error("Sign out failed", {
+        description: error
+      });
+    }
+  };
 
   const navItems = [
     { path: "/discover", label: "Discover" },
@@ -112,7 +130,10 @@ export default function Header() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-red-500 focus:text-red-500">
+              <DropdownMenuItem 
+                className="cursor-pointer text-red-500 focus:text-red-500"
+                onClick={handleSignOut}
+              >
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

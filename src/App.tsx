@@ -34,6 +34,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/:mode" element={<AuthPage />} />
             <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route index element={<Index />} />
               <Route path="dashboard" element={<DashboardPage />} />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
