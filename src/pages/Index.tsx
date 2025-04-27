@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
@@ -27,16 +26,89 @@ import {
   Zap
 } from "lucide-react";
 
-// Background component with animated stars
+// Background component with animated stars and fallback
 function Background() {
+  const [hasWebGLError, setHasWebGLError] = useState(false);
+  
+  // Fallback for WebGL errors
+  const handleWebGLError = () => {
+    console.log("WebGL error detected, switching to fallback background");
+    setHasWebGLError(true);
+  };
+
+  // Simple fallback background
+  if (hasWebGLError) {
+    return (
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background via-background/90 to-background/80">
+        <div className="absolute inset-0 opacity-30">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-primary/20"
+              style={{
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                width: `${Math.random() * 4 + 1}px`,
+                height: `${Math.random() * 4 + 1}px`,
+                opacity: Math.random() * 0.7 + 0.3,
+                animation: `pulse ${Math.random() * 3 + 2}s infinite ease-in-out`
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute inset-0 -z-10">
-      <Canvas camera={{ position: [0, 0, 1] }}>
-        <Stars />
-        <ambientLight intensity={0.5} />
-      </Canvas>
+      <Suspense fallback={<div className="absolute inset-0 bg-gradient-to-b from-background to-background/80" />}>
+        <ErrorBoundary onError={handleWebGLError}>
+          <Canvas 
+            camera={{ position: [0, 0, 1] }}
+            onCreated={({ gl }) => {
+              gl.setClearColor('rgb(15, 23, 42)', 1);
+            }}
+            gl={{ 
+              powerPreference: "default",
+              antialias: false,
+              stencil: false,
+              depth: false,
+            }}
+          >
+            <Stars />
+            <ambientLight intensity={0.5} />
+          </Canvas>
+        </ErrorBoundary>
+      </Suspense>
     </div>
   );
+}
+
+// Simple error boundary for WebGL errors
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    // Pass the error to parent component
+    if (this.props.onError) {
+      this.props.onError(error);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // The parent will render the fallback
+    }
+    return this.props.children;
+  }
 }
 
 // Animated section component
