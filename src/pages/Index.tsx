@@ -1,4 +1,5 @@
-import { useState, useEffect, Suspense } from "react";
+
+import React, { useState, useEffect, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Canvas } from "@react-three/fiber";
 import { Stars } from "@react-three/drei";
@@ -26,13 +27,45 @@ import {
   Zap
 } from "lucide-react";
 
+// Define props interface for ErrorBoundary component
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  onError: (error: Error) => void;
+}
+
+// Simple error boundary for WebGL errors
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: boolean }> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    // Pass the error to parent component
+    if (this.props.onError) {
+      this.props.onError(error);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null; // The parent will render the fallback
+    }
+    return this.props.children;
+  }
+}
+
 // Background component with animated stars and fallback
 function Background() {
   const [hasWebGLError, setHasWebGLError] = useState(false);
   
   // Fallback for WebGL errors
-  const handleWebGLError = () => {
-    console.log("WebGL error detected, switching to fallback background");
+  const handleWebGLError = (error: Error) => {
+    console.log("WebGL error detected, switching to fallback background", error);
     setHasWebGLError(true);
   };
 
@@ -83,32 +116,6 @@ function Background() {
       </Suspense>
     </div>
   );
-}
-
-// Simple error boundary for WebGL errors
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error) {
-    // Pass the error to parent component
-    if (this.props.onError) {
-      this.props.onError(error);
-    }
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return null; // The parent will render the fallback
-    }
-    return this.props.children;
-  }
 }
 
 // Animated section component
