@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +39,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
 import { type Tables } from "@/integrations/supabase/types";
+import { useNavigate } from "react-router-dom";
 
 const profileFormSchema = z.object({
   full_name: z.string().min(2, {
@@ -68,11 +70,20 @@ type Profile = Tables<"profiles">;
 export default function ProfilePage() {
   const { profile, loading, error, updateProfile } = useProfile();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [newSkill, setNewSkill] = useState("");
   const [newIndustry, setNewIndustry] = useState("");
   const [newProjectType, setNewProjectType] = useState("");
   const [formData, setFormData] = useState<Partial<Profile>>({});
+
+  // Redirect to auth page if user is not authenticated
+  useEffect(() => {
+    if (!user && !loading) {
+      toast.error("Please log in to view your profile");
+      navigate("/auth");
+    }
+  }, [user, loading, navigate]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -114,6 +125,7 @@ export default function ProfilePage() {
     }
   }, [profile, form]);
 
+  // Fetch profile data when user is available
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
@@ -147,58 +159,99 @@ export default function ProfilePage() {
         preferred_project_types: profile?.preferred_project_types || [],
       });
       setIsEditing(false);
+      toast.success("Profile updated successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
     }
   }
 
   const addSkill = () => {
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
+    
     if (newSkill && !profile?.skills?.includes(newSkill)) {
       updateProfile({
         skills: [...(profile?.skills || []), newSkill],
       });
       setNewSkill("");
+      toast.success("Skill added");
     }
   };
 
   const removeSkill = (skillToRemove: string) => {
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
+    
     updateProfile({
       skills: profile?.skills?.filter(skill => skill !== skillToRemove) || [],
     });
+    toast.success("Skill removed");
   };
 
   const addIndustry = () => {
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
+    
     if (newIndustry && !profile?.preferred_industries?.includes(newIndustry)) {
       updateProfile({
         preferred_industries: [...(profile?.preferred_industries || []), newIndustry],
       });
       setNewIndustry("");
+      toast.success("Industry preference added");
     }
   };
 
   const removeIndustry = (industryToRemove: string) => {
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
+    
     updateProfile({
       preferred_industries: profile?.preferred_industries?.filter(industry => industry !== industryToRemove) || [],
     });
+    toast.success("Industry preference removed");
   };
 
   const addProjectType = () => {
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
+    
     if (newProjectType && !profile?.preferred_project_types?.includes(newProjectType)) {
       updateProfile({
         preferred_project_types: [...(profile?.preferred_project_types || []), newProjectType],
       });
       setNewProjectType("");
+      toast.success("Project type preference added");
     }
   };
 
   const removeProjectType = (typeToRemove: string) => {
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
+    
     updateProfile({
       preferred_project_types: profile?.preferred_project_types?.filter(type => type !== typeToRemove) || [],
     });
+    toast.success("Project type preference removed");
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Please log in to update your profile");
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -231,6 +284,22 @@ export default function ProfilePage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Handle case where user is null
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-destructive">Please log in to view your profile</p>
+            <Button onClick={() => navigate("/auth")} className="mt-4">
+              Go to Login
+            </Button>
           </CardContent>
         </Card>
       </div>
