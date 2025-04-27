@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -28,11 +29,11 @@ export const useProfile = () => {
 
       if (error) throw error;
 
+      console.log("Fetched profile:", data);
       setProfile(data);
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
-      toast.error('Failed to load profile data');
     } finally {
       setLoading(false);
     }
@@ -46,7 +47,9 @@ export const useProfile = () => {
 
     try {
       setLoading(true);
-      const { error } = await supabase
+      console.log("Updating profile with:", updates);
+      
+      const { data, error } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
@@ -58,13 +61,14 @@ export const useProfile = () => {
 
       if (error) throw error;
 
-      // Refresh profile data
-      await fetchProfile();
-      toast.success('Profile updated successfully');
+      console.log("Profile updated successfully:", data);
+      
+      // Update the local profile state with the new data
+      setProfile(data);
+      
       return { error: null };
     } catch (err) {
       console.error('Error updating profile:', err);
-      toast.error('Failed to update profile');
       return { error: err instanceof Error ? err : new Error('Failed to update profile') };
     } finally {
       setLoading(false);

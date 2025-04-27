@@ -44,26 +44,34 @@ export default function OnboardingPage() {
   const [selectedIndustry, setSelectedIndustry] = useState("");
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string>("");
-  const { updateProfile } = useProfile();
+  const { updateProfile, profile } = useProfile();
 
   const form = useForm<OnboardingFormData>({
     resolver: zodResolver(professionalInfoSchema),
     defaultValues: {
-      fullName: "",
-      stage: "",
-      industry: "",
-      role: "",
-      skills: [],
-      looking_for: [],
-      project_stage: "",
-      project_description: "",
-      preferred_industries: [],
-      preferred_project_types: [],
-      bio: "",
-      motivation: "",
-      linkedin_url: "",
-      portfolio_url: "",
+      fullName: profile?.full_name || "",
+      stage: profile?.stage || "",
+      industry: profile?.industry || "",
+      role: profile?.role || "",
+      skills: profile?.skills || [],
+      looking_for: profile?.looking_for || [],
+      project_stage: profile?.project_stage || "",
+      project_description: profile?.project_description || "",
+      preferred_industries: profile?.preferred_industries || [],
+      preferred_project_types: profile?.preferred_project_types || [],
+      bio: profile?.bio || "",
+      motivation: profile?.motivation || "",
+      linkedin_url: profile?.linkedin_url || "",
+      portfolio_url: profile?.portfolio_url || "",
     },
+  });
+
+  // Initialize selected industry and skills if data exists
+  useState(() => {
+    if (profile?.industry) {
+      setSelectedIndustry(profile.industry);
+      setAvailableSkills(SKILLS_BY_INDUSTRY[profile.industry as keyof typeof SKILLS_BY_INDUSTRY] || []);
+    }
   });
 
   const handleIndustryChange = (value: string) => {
@@ -81,6 +89,8 @@ export default function OnboardingPage() {
         toast.error("User not authenticated");
         return;
       }
+
+      console.log("Submitting profile data:", data);
 
       // Update profile in Supabase
       const { error } = await updateProfile({
@@ -101,10 +111,16 @@ export default function OnboardingPage() {
         onboarding_completed: true,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error details:", error);
+        throw error;
+      }
 
       toast.success("Profile completed successfully!");
-      navigate("/dashboard", { replace: true });
+      // Force a small delay to ensure the database update is processed
+      setTimeout(() => {
+        navigate("/dashboard", { replace: true });
+      }, 500);
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error(

@@ -11,13 +11,18 @@ export function OnboardingCheck({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && user && profile) {
-      const isOnboardingComplete = Boolean(
+      console.log("Checking onboarding status:", profile);
+      
+      // Check if onboarding is explicitly completed or if all required fields are present
+      const isOnboardingComplete = profile.onboarding_completed || Boolean(
         profile.industry &&
         profile.role &&
         profile.skills?.length > 0 &&
         profile.stage &&
         profile.looking_for?.length > 0
       );
+
+      console.log("Is onboarding complete:", isOnboardingComplete);
 
       if (!isOnboardingComplete) {
         navigate("/onboarding");
