@@ -1,14 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -20,8 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { MessageCircle, PlusCircle, User } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -32,9 +23,11 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
 import { useNavigate } from "react-router-dom";
-import { Profile } from "@/types/project";
+import { ProjectCard } from "@/components/projects/ProjectCard";
+import { ProjectFilters } from "@/components/projects/ProjectFilters";
+import type { Tables } from "@/integrations/supabase/types";
+import type { Profile } from "@/types/project";
 
 type Project = Tables<"projects">;
 
@@ -49,6 +42,9 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
+  
   const [newProject, setNewProject] = useState({
     title: "",
     description: "",
@@ -57,31 +53,26 @@ export default function ProjectsPage() {
     duration: "",
   });
 
-  useEffect(() => {
-    fetchProjects();
-  }, [user]);
-
   const fetchProjects = async () => {
     if (!user) return;
 
     try {
       setLoading(true);
       
-      // First get all projects
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
         .select('*')
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: sortBy === "oldest" });
 
       if (projectsError) throw projectsError;
 
-      if (!projectsData || projectsData.length === 0) {
+      if (!projectsData) {
         setProjects([]);
         setLoading(false);
         return;
       }
 
-      // Then fetch profiles for the projects
+      // Fetch profiles for the projects
       const userIds = projectsData.map(project => project.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
@@ -90,7 +81,7 @@ export default function ProjectsPage() {
 
       if (profilesError) throw profilesError;
 
-      // Create a map of profiles by user_id for quick lookup
+      // Create a map of profiles by user_id
       const profilesMap: Record<string, Profile> = {};
       if (profilesData) {
         profilesData.forEach(profile => {
@@ -99,21 +90,20 @@ export default function ProjectsPage() {
       }
 
       // Combine projects with their creators
-      const projectsWithCreators = projectsData.map(project => {
-        const creator = profilesMap[project.user_id] || {
-          id: project.user_id,
-          full_name: 'Unknown User',
-          avatar_url: null,
-          user_id: project.user_id
-        } as Profile;
-        
-        return {
+      const filteredProjects = projectsData
+        .map(project => ({
           ...project,
-          creator
-        } as ProjectWithCreator;
-      });
+          creator: profilesMap[project.user_id] || {
+            id: project.user_id,
+            full_name: 'Unknown User',
+          } as Profile
+        }))
+        .filter(project => 
+          project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          project.description.toLowerCase().includes(searchTerm.toLowerCase())
+        );
 
-      setProjects(projectsWithCreators);
+      setProjects(filteredProjects);
     } catch (error) {
       console.error("Error fetching projects:", error);
       toast.error("Failed to load projects");
@@ -121,6 +111,10 @@ export default function ProjectsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchProjects();
+  }, [user, searchTerm, sortBy]);
 
   const handleCreateProject = async () => {
     if (!user) {
@@ -298,6 +292,13 @@ export default function ProjectsPage() {
         </Dialog>
       </div>
 
+      <ProjectFilters
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+      />
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.length === 0 ? (
           <div className="col-span-full text-center py-12">
@@ -314,67 +315,12 @@ export default function ProjectsPage() {
           </div>
         ) : (
           projects.map((project) => (
-            <Card key={project.id} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="h-8 w-8 rounded-full overflow-hidden">
-                    <img
-                      src={project.creator?.avatar_url || "/default-avatar.png"}
-                      alt={project.creator?.full_name || "User"}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="text-sm font-medium">{project.creator?.full_name}</div>
-                </div>
-                <CardTitle className="line-clamp-2">{project.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1">
-                <p className="text-muted-foreground line-clamp-3 mb-4">
-                  {project.description}
-                </p>
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-xs font-medium mb-1">Required Skills:</div>
-                    <div className="flex flex-wrap gap-1">
-                      {project.required_skills?.map((skill) => (
-                        <Badge key={skill} variant="outline" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-xs font-medium mb-1">Looking for:</div>
-                      <div className="text-sm">{project.looking_for}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs font-medium mb-1">Duration:</div>
-                      <div className="text-sm">{project.duration}</div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between border-t pt-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={() => navigate(`/profile/${project.creator?.id}`)}
-                >
-                  <User className="h-4 w-4" />
-                  View Profile
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => navigate(`/messages?userId=${project.creator?.id}`)}
-                >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Contact
-                </Button>
-              </CardFooter>
-            </Card>
+            <ProjectCard 
+              key={project.id} 
+              project={project} 
+              creator={project.creator}
+              onInteraction={fetchProjects}
+            />
           ))
         )}
       </div>
