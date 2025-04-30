@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +18,7 @@ export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { sendConnectionRequest, checkConnectionStatus, getConnectionId, respondToRequest } = useConnectionRequests();
+  const { sendConnectionRequest, checkConnectionStatus, getConnectionId, respondToRequest, refresh: refreshConnections } = useConnectionRequests();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
@@ -56,8 +55,11 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (user && id) {
       const status = checkConnectionStatus(id);
+      console.log('Connection status with user:', status);
       setConnectionStatus(status);
+      
       const connId = getConnectionId(id);
+      console.log('Connection ID:', connId);
       setConnectionId(connId);
     }
   }, [user, id, checkConnectionStatus, getConnectionId]);
@@ -71,11 +73,13 @@ export default function UserProfilePage() {
       
       if (result.error) {
         toast.error(result.error);
+        setProcessingAction(false);
         return;
       }
       
       setConnectionStatus('pending');
       toast.success('Connection request sent');
+      refreshConnections();
     } catch (error) {
       console.error('Error sending connection request:', error);
       toast.error('Failed to send connection request');
@@ -89,9 +93,17 @@ export default function UserProfilePage() {
     setProcessingAction(true);
     
     try {
-      await respondToRequest(connectionId, 'accepted');
+      const result = await respondToRequest(connectionId, 'accepted');
+      
+      if (result.error) {
+        toast.error(result.error);
+        setProcessingAction(false);
+        return;
+      }
+      
       setConnectionStatus('accepted');
       toast.success('Connection accepted');
+      refreshConnections();
     } catch (error) {
       console.error('Error accepting connection:', error);
       toast.error('Failed to accept connection');
@@ -105,9 +117,17 @@ export default function UserProfilePage() {
     setProcessingAction(true);
     
     try {
-      await respondToRequest(connectionId, 'rejected');
+      const result = await respondToRequest(connectionId, 'rejected');
+      
+      if (result.error) {
+        toast.error(result.error);
+        setProcessingAction(false);
+        return;
+      }
+      
       setConnectionStatus('rejected');
       toast.success('Connection declined');
+      refreshConnections();
     } catch (error) {
       console.error('Error declining connection:', error);
       toast.error('Failed to decline connection');
@@ -181,6 +201,7 @@ export default function UserProfilePage() {
                       <Button 
                         onClick={handleConnectRequest} 
                         disabled={processingAction}
+                        className="w-full"
                       >
                         {processingAction ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -192,35 +213,39 @@ export default function UserProfilePage() {
                     )}
                     
                     {connectionStatus === 'pending' && connectionId && (
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={handleAcceptConnection} 
-                          disabled={processingAction} 
-                          className="flex-1"
-                        >
-                          {processingAction ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Check className="h-4 w-4 mr-2" />
-                          )}
-                          Accept
-                        </Button>
-                        <Button 
-                          onClick={handleRejectConnection} 
-                          disabled={processingAction}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          Decline
-                        </Button>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-sm text-center text-muted-foreground">This user has sent you a connection request</p>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={handleAcceptConnection} 
+                            disabled={processingAction} 
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                          >
+                            {processingAction ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4 mr-2" />
+                            )}
+                            Accept
+                          </Button>
+                          <Button 
+                            onClick={handleRejectConnection} 
+                            disabled={processingAction}
+                            variant="outline"
+                            className="flex-1 border-red-200 hover:bg-red-50 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Decline
+                          </Button>
+                        </div>
                       </div>
                     )}
                     
                     {connectionStatus === 'pending' && !connectionId && (
                       <Button 
-                        disabled 
+                        disabled
                         variant="outline"
+                        className="w-full"
                       >
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Request Pending
@@ -231,6 +256,7 @@ export default function UserProfilePage() {
                       <Button 
                         onClick={handleMessage} 
                         variant="default"
+                        className="w-full"
                       >
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Send Message
@@ -241,6 +267,7 @@ export default function UserProfilePage() {
                       <Button 
                         onClick={handleConnectRequest} 
                         variant="outline"
+                        className="w-full"
                       >
                         <UserPlus className="h-4 w-4 mr-2" />
                         Request Connection Again

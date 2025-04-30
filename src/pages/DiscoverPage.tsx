@@ -12,13 +12,14 @@ import { Check, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useDiscoverProfiles } from "@/hooks/useDiscoverProfiles";
-import { supabase } from "@/integrations/supabase/client";
+import { useConnectionRequests } from "@/hooks/useConnectionRequests";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tables } from "@/integrations/supabase/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // Empty state for discover page
 const EmptyDiscoverState = () => (
@@ -39,8 +40,19 @@ type Profile = Tables<"profiles">;
 
 const ProfileCard = ({ profile }: { profile: Profile }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { sendConnectionRequest, checkConnectionStatus } = useConnectionRequests();
   const [isLoading, setIsLoading] = useState(false);
   const [showFullProfile, setShowFullProfile] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  
+  // Check connection status when component mounts
+  useEffect(() => {
+    if (user && profile) {
+      const status = checkConnectionStatus(profile.id);
+      setConnectionStatus(status);
+    }
+  }, [user, profile, checkConnectionStatus]);
 
   const handleConnectionRequest = async () => {
     if (!user) {
@@ -50,15 +62,14 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('connections')
-        .insert({
-          requester_id: user.id,
-          recipient_id: profile.id,
-          status: 'pending'
-        });
-
-      if (error) throw error;
+      const result = await sendConnectionRequest(profile.id);
+      
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      
+      setConnectionStatus('pending');
       toast.success("Connection request sent!");
     } catch (error) {
       console.error("Error sending connection request:", error);
@@ -68,16 +79,31 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
     }
   };
 
+  const getButtonText = () => {
+    switch (connectionStatus) {
+      case 'pending':
+        return 'Pending';
+      case 'accepted':
+        return 'Connected';
+      case 'rejected':
+        return 'Connect Again';
+      default:
+        return 'Connect';
+    }
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto hover:shadow-lg transition-shadow">
       <CardHeader>
         <div className="flex items-center space-x-4">
-          <Avatar className="h-12 w-12">
+          <Avatar className="h-12 w-12 cursor-pointer" onClick={() => navigate(`/profile/${profile.id}`)}>
             <AvatarImage src={profile.avatar_url || undefined} />
             <AvatarFallback>{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle>{profile.full_name}</CardTitle>
+            <CardTitle className="cursor-pointer hover:text-primary" onClick={() => navigate(`/profile/${profile.id}`)}>
+              {profile.full_name}
+            </CardTitle>
             <CardDescription>{profile.title || profile.stage}</CardDescription>
           </div>
         </div>
@@ -132,113 +158,24 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
       <CardFooter className="flex justify-between">
         <Button
           variant="outline"
-          onClick={() => setShowFullProfile(true)}
+          onClick={() => navigate(`/profile/${profile.id}`)}
         >
           View Profile
         </Button>
         <Button
-          onClick={handleConnectionRequest}
-          disabled={isLoading}
+          onClick={connectionStatus === 'none' || connectionStatus === 'rejected' ? handleConnectionRequest : 
+                  connectionStatus === 'accepted' ? () => navigate(`/messages?userId=${profile.id}`) : undefined}
+          disabled={isLoading || connectionStatus === 'pending'}
+          variant={connectionStatus === 'accepted' ? 'default' : 
+                  connectionStatus === 'pending' ? 'outline' : 'default'}
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            "Connect"
+            getButtonText()
           )}
         </Button>
       </CardFooter>
-
-      {/* Full Profile Modal */}
-      {showFullProfile && (
-        <Dialog open={showFullProfile} onOpenChange={setShowFullProfile}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Full Profile</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={profile.avatar_url || undefined} />
-                  <AvatarFallback>{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-2xl font-bold">{profile.full_name}</h2>
-                  <p className="text-muted-foreground">{profile.title || profile.stage}</p>
-                </div>
-              </div>
-
-              {profile.bio && (
-                <div>
-                  <h3 className="font-medium mb-2">About</h3>
-                  <p className="text-muted-foreground">{profile.bio}</p>
-                </div>
-              )}
-
-              {profile.project_description && (
-                <div>
-                  <h3 className="font-medium mb-2">Project</h3>
-                  <p className="text-muted-foreground">{profile.project_description}</p>
-                  {profile.project_stage && (
-                    <Badge className="mt-2">{profile.project_stage}</Badge>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                {profile.skills && profile.skills.length > 0 && (
-                  <div>
-                    <h3 className="font-medium mb-2">Skills</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.skills.map((skill) => (
-                        <Badge key={skill} variant="secondary">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {profile.looking_for && profile.looking_for.length > 0 && (
-                  <div>
-                    <h3 className="font-medium mb-2">Looking For</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {profile.looking_for.map((item) => (
-                        <Badge key={item} variant="outline">
-                          {item}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {profile.motivation && (
-                <div>
-                  <h3 className="font-medium mb-2">Motivation</h3>
-                  <p className="text-muted-foreground">{profile.motivation}</p>
-                </div>
-              )}
-
-              <div className="flex space-x-4">
-                {profile.linkedin_url && (
-                  <Button variant="outline" asChild>
-                    <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer">
-                      LinkedIn
-                    </a>
-                  </Button>
-                )}
-                {profile.portfolio_url && (
-                  <Button variant="outline" asChild>
-                    <a href={profile.portfolio_url} target="_blank" rel="noopener noreferrer">
-                      Portfolio
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </Card>
   );
 };
@@ -246,6 +183,8 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
 export default function DiscoverPage() {
   const { profiles, loading, error, refetchProfiles } = useDiscoverProfiles();
   const { user } = useAuth();
+  const { sendConnectionRequest } = useConnectionRequests();
+  const navigate = useNavigate();
   const [currentProfileIndex, setCurrentProfileIndex] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [animationDirection, setAnimationDirection] = useState<"left" | "right" | "">("");
@@ -271,22 +210,20 @@ export default function DiscoverPage() {
       // Set animation direction based on action
       setAnimationDirection(action === 'accept' ? 'right' : 'left');
 
-      const { data, error } = await supabase
-        .from('connections')
-        .insert({
-          requester_id: user.id,
-          recipient_id: recipientId,
-          status: action === 'accept' ? 'pending' : 'rejected'
-        })
-        .select();
-
-      if (error) throw error;
-
-      toast.success(
-        action === 'accept' 
-          ? 'Connection request sent!' 
-          : 'Profile passed'
-      );
+      if (action === 'accept') {
+        const result = await sendConnectionRequest(recipientId);
+        
+        if (result.error) {
+          toast.error(result.error);
+          setActionLoading(false);
+          setAnimationDirection("");
+          return;
+        }
+        
+        toast.success('Connection request sent!');
+      } else {
+        toast.info('Profile passed');
+      }
 
       // Move to next profile
       setTimeout(() => {
@@ -392,7 +329,7 @@ export default function DiscoverPage() {
             `}>
               <CardHeader className="flex flex-col items-center text-center">
                 <div className="w-32 h-32 rounded-full overflow-hidden mb-4 ring-4 ring-background border-2 border-primary/20">
-                  <Avatar className="w-full h-full">
+                  <Avatar className="w-full h-full cursor-pointer" onClick={() => navigate(`/profile/${currentProfile.id}`)}>
                     <AvatarImage
                       src={currentProfile.avatar_url || '/placeholder.svg'}
                       alt={currentProfile.full_name || 'User avatar'}
@@ -403,7 +340,10 @@ export default function DiscoverPage() {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                <CardTitle className="text-2xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                <CardTitle 
+                  className="text-2xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent cursor-pointer hover:opacity-80"
+                  onClick={() => navigate(`/profile/${currentProfile.id}`)}
+                >
                   {currentProfile.full_name}
                 </CardTitle>
                 <CardDescription className="text-lg font-medium">
@@ -433,7 +373,7 @@ export default function DiscoverPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-medium mb-2 text-primary">Looking for</h3>
-                  <p className="text-sm">{currentProfile.looking_for || "Not specified"}</p>
+                  <p className="text-sm">{currentProfile.looking_for?.join(', ') || "Not specified"}</p>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-center gap-4 p-6">

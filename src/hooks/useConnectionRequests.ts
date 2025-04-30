@@ -145,11 +145,11 @@ export function useConnectionRequests() {
     
     // Check sent requests
     const sentRequest = sentRequests.find(req => req.recipient_id === userId);
-    if (sentRequest) return sentRequest.status as 'pending' | 'accepted' | 'rejected';
+    if (sentRequest) return sentRequest.status;
     
     // Check received requests
     const receivedRequest = requests.find(req => req.requester_id === userId);
-    if (receivedRequest) return receivedRequest.status as 'pending' | 'accepted' | 'rejected';
+    if (receivedRequest) return receivedRequest.status;
     
     return 'none';
   };
@@ -165,6 +165,11 @@ export function useConnectionRequests() {
     if (receivedRequest) return receivedRequest.id;
     
     return null;
+  };
+  
+  // Get pending connections count
+  const getPendingRequestsCount = (): number => {
+    return requests.filter(req => req.status === 'pending').length;
   };
   
   // Setup real-time subscription
@@ -188,7 +193,13 @@ export function useConnectionRequests() {
           fetchConnectionRequests();
           
           if (payload.eventType === 'INSERT') {
-            toast.info('You received a new connection request');
+            // Show notification for new request
+            toast.info('You received a new connection request', {
+              action: {
+                label: 'View',
+                onClick: () => window.location.href = '/connections?tab=pending'
+              }
+            });
           } else if (payload.eventType === 'UPDATE' && payload.new.status === 'accepted') {
             toast.success('Connection request accepted');
           }
@@ -210,6 +221,7 @@ export function useConnectionRequests() {
     respondToRequest,
     checkConnectionStatus,
     getConnectionId,
+    getPendingRequestsCount,
     refresh: fetchConnectionRequests
   };
 }

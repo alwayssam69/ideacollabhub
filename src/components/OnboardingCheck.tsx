@@ -1,12 +1,15 @@
+
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
+import { useConnectionRequests } from "@/hooks/useConnectionRequests";
 import { toast } from "sonner";
 
 export function OnboardingCheck({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { profile, loading } = useProfile();
+  const { getPendingRequestsCount } = useConnectionRequests();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -32,8 +35,21 @@ export function OnboardingCheck({ children }: { children: React.ReactNode }) {
         toast.info("Please complete your profile before continuing");
         navigate("/onboarding", { replace: true });
       }
+      
+      // Notify about pending connection requests (only on certain paths)
+      const pendingCount = getPendingRequestsCount();
+      if (pendingCount > 0 && 
+          !['/connections', '/pending-requests'].includes(location.pathname) && 
+          !location.pathname.includes('/messages')) {
+        toast.info(`You have ${pendingCount} pending connection request${pendingCount > 1 ? 's' : ''}`, {
+          action: {
+            label: "View",
+            onClick: () => navigate("/connections?tab=pending")
+          }
+        });
+      }
     }
-  }, [user, profile, loading, navigate, location.pathname]);
+  }, [user, profile, loading, navigate, location.pathname, getPendingRequestsCount]);
 
   if (loading) {
     return (
