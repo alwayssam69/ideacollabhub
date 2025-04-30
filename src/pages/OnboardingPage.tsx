@@ -44,6 +44,7 @@ export default function OnboardingPage() {
     project_description: profile?.project_description || "",
     preferred_industries: profile?.preferred_industries || [],
     preferred_project_types: profile?.preferred_project_types || [],
+    onboarding_completed: profile?.onboarding_completed || false,
   };
 
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function OnboardingPage() {
         preferred_industries: data.preferred_industries || [data.industry],
         preferred_project_types: data.preferred_project_types || data.looking_for,
         // Only set onboarding_completed to true when explicitly requested
-        ...(data.onboarding_completed && { onboarding_completed: true }),
+        ...(data.onboarding_completed !== undefined && { onboarding_completed: data.onboarding_completed }),
       });
 
       if (error) {

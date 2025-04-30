@@ -45,7 +45,11 @@ export const useProfile = () => {
       if (error) throw error;
 
       console.log("Fetched profile:", data);
-      setProfile(data as Profile);
+      
+      // Safely cast the data to Profile type
+      if (data) {
+        setProfile(data as unknown as Profile);
+      }
     } catch (err) {
       console.error('Error fetching profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
@@ -79,7 +83,7 @@ export const useProfile = () => {
       console.log("Profile updated successfully:", data);
       
       // Update the local profile state with the new data
-      setProfile(prev => prev ? { ...prev, ...data } : data);
+      setProfile(prev => prev ? { ...prev, ...data } : data as unknown as Profile);
       
       return { error: null };
     } catch (err) {

@@ -43,6 +43,7 @@ export interface OnboardingFormData {
   project_description?: string;
   preferred_industries?: string[];
   preferred_project_types?: string[];
+  onboarding_completed?: boolean;
 }
 
 export interface OnboardingStepProps {

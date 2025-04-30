@@ -81,10 +81,12 @@ export const MultiStepForm = ({ initialData, onSave, onComplete }: MultiStepForm
     if (currentStep === steps.length - 1) {
       try {
         setIsSaving(true);
-        await onSave({
+        // Create a copy of the form data with the onboarding_completed flag set
+        const completedFormData = {
           ...formData,
           onboarding_completed: true
-        });
+        };
+        await onSave(completedFormData);
         onComplete();
         toast.success("Profile completed successfully!");
       } catch (error) {
