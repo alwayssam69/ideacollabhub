@@ -1,205 +1,138 @@
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormField } from "@/components/ui/form";
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import ProfilePhotoUpload from "@/components/ProfilePhotoUpload";
 import { OnboardingFormData } from "@/types/onboarding";
-import { BasicInfoSection } from "@/components/onboarding/BasicInfoSection";
-import { ProjectInfoSection } from "@/components/onboarding/ProjectInfoSection";
-import { SkillsSection } from "@/components/onboarding/SkillsSection";
-import { PreferencesSection } from "@/components/onboarding/PreferencesSection";
 import { useProfile } from "@/hooks/useProfile";
-import { SKILLS_BY_INDUSTRY } from "@/constants/skillsData";
-
-const professionalInfoSchema = z.object({
-  fullName: z.string().min(1, "Name is required"),
-  stage: z.string().min(1, "Stage is required"),
-  industry: z.string().min(1, "Industry is required"),
-  role: z.string().min(1, "Role is required"),
-  skills: z.array(z.string()).min(1, "Please select at least one skill"),
-  looking_for: z.array(z.string()).min(1, "Please select at least one purpose"),
-  project_stage: z.string().optional(),
-  project_description: z.string().optional(),
-  preferred_industries: z.array(z.string()).optional(),
-  preferred_project_types: z.array(z.string()).optional(),
-  bio: z.string().optional(),
-  motivation: z.string().optional(),
-  linkedin_url: z.string().optional(),
-  portfolio_url: z.string().optional(),
-  profilePhoto: z.instanceof(File).optional(),
-});
+import { MultiStepForm } from "@/components/onboarding/MultiStepForm";
 
 export default function OnboardingPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedIndustry, setSelectedIndustry] = useState("");
-  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
-  const [previewUrl, setPreviewUrl] = useState<string>("");
+  const [loading, setLoading] = useState(true);
   const { updateProfile, profile } = useProfile();
 
-  const form = useForm<OnboardingFormData>({
-    resolver: zodResolver(professionalInfoSchema),
-    defaultValues: {
-      fullName: profile?.full_name || "",
-      stage: profile?.stage || "",
-      industry: profile?.industry || "",
-      role: profile?.role || "",
-      skills: profile?.skills || [],
-      looking_for: profile?.looking_for || [],
-      project_stage: profile?.project_stage || "",
-      project_description: profile?.project_description || "",
-      preferred_industries: profile?.preferred_industries || [],
-      preferred_project_types: profile?.preferred_project_types || [],
-      bio: profile?.bio || "",
-      motivation: profile?.motivation || "",
-      linkedin_url: profile?.linkedin_url || "",
-      portfolio_url: profile?.portfolio_url || "",
-    },
-  });
-
-  // Initialize selected industry and skills if data exists
-  useState(() => {
-    if (profile?.industry) {
-      setSelectedIndustry(profile.industry);
-      setAvailableSkills(SKILLS_BY_INDUSTRY[profile.industry as keyof typeof SKILLS_BY_INDUSTRY] || []);
-    }
-  });
-
-  const handleIndustryChange = (value: string) => {
-    setSelectedIndustry(value);
-    form.setValue("industry", value);
-    form.setValue("skills", []);
-    setAvailableSkills(SKILLS_BY_INDUSTRY[value as keyof typeof SKILLS_BY_INDUSTRY] || []);
+  const initialFormData: OnboardingFormData = {
+    fullName: profile?.full_name || "",
+    role: profile?.role || "",
+    city: profile?.location || "",
+    linkedin_url: profile?.linkedin_url || "",
+    portfolio_url: profile?.portfolio_url || "",
+    experience: profile?.experience || "",
+    education: profile?.education || "",
+    work_history: profile?.work_history || "",
+    bio: profile?.bio || "",
+    industry: profile?.industry || "",
+    skills: profile?.skills || [],
+    secondary_skills: profile?.secondary_skills || [],
+    tools: profile?.tools || [],
+    availability: profile?.availability || "",
+    work_style: profile?.work_style || "",
+    location_preference: profile?.location_preference || "",
+    stage: profile?.stage || "",
+    preferred_project_stages: profile?.preferred_project_stages || [],
+    looking_for: profile?.looking_for || [],
+    goals: profile?.goals || [],
+    long_term_goal: profile?.long_term_goal || "",
+    past_startup_experience: profile?.past_startup_experience || false,
+    willing_to_relocate: profile?.willing_to_relocate || false,
+    core_values: profile?.core_values || [],
+    motivation: profile?.motivation || "",
+    project_stage: profile?.project_stage || "",
+    project_description: profile?.project_description || "",
+    preferred_industries: profile?.preferred_industries || [],
+    preferred_project_types: profile?.preferred_project_types || [],
   };
 
-  const onSubmit = async (data: OnboardingFormData) => {
-    setIsSubmitting(true);
+  useEffect(() => {
+    if (profile) {
+      setLoading(false);
+    }
+  }, [profile]);
+
+  const handleSave = async (data: OnboardingFormData) => {
+    if (!user) {
+      toast.error("User not authenticated");
+      return;
+    }
 
     try {
-      if (!user) {
-        toast.error("User not authenticated");
-        return;
-      }
+      console.log("Saving profile data:", data);
 
-      console.log("Submitting profile data:", data);
-
-      // Update profile in Supabase
+      // Map form data to profile schema
       const { error } = await updateProfile({
         full_name: data.fullName,
-        stage: data.stage,
-        industry: data.industry,
         role: data.role,
+        location: data.city,
+        linkedin_url: data.linkedin_url,
+        portfolio_url: data.portfolio_url,
+        experience: data.experience,
+        education: data.education,
+        work_history: data.work_history,
+        bio: data.bio,
+        industry: data.industry,
         skills: data.skills,
+        secondary_skills: data.secondary_skills,
+        tools: data.tools,
+        availability: data.availability,
+        work_style: data.work_style,
+        location_preference: data.location_preference,
+        stage: data.stage,
+        preferred_project_stages: data.preferred_project_stages,
         looking_for: data.looking_for,
+        goals: data.goals,
+        long_term_goal: data.long_term_goal,
+        past_startup_experience: data.past_startup_experience,
+        willing_to_relocate: data.willing_to_relocate,
+        core_values: data.core_values,
+        motivation: data.motivation,
         project_stage: data.project_stage,
         project_description: data.project_description,
         preferred_industries: data.preferred_industries || [data.industry],
         preferred_project_types: data.preferred_project_types || data.looking_for,
-        bio: data.bio,
-        motivation: data.motivation,
-        linkedin_url: data.linkedin_url,
-        portfolio_url: data.portfolio_url,
-        onboarding_completed: true,
+        // Only set onboarding_completed to true when explicitly requested
+        ...(data.onboarding_completed && { onboarding_completed: true }),
       });
 
       if (error) {
         console.error("Error details:", error);
         throw error;
       }
-
-      toast.success("Profile completed successfully!");
-      // Force a small delay to ensure the database update is processed
-      setTimeout(() => {
-        navigate("/dashboard", { replace: true });
-      }, 500);
     } catch (error) {
       console.error("Error saving profile:", error);
-      toast.error(
-        error instanceof Error 
-          ? `Failed to save profile: ${error.message}`
-          : "Failed to save profile. Please try again."
-      );
-    } finally {
-      setIsSubmitting(false);
+      throw error;
     }
   };
 
+  const handleComplete = () => {
+    navigate("/dashboard", { replace: true });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-900 to-slate-800">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Complete Your Profile</h1>
           <p className="text-slate-300">Let's get to know you better to find the perfect matches</p>
         </div>
         
         <Card className="shadow-lg border-0 bg-slate-900/50 backdrop-blur">
-          <CardHeader className="border-b border-slate-700">
-            <CardTitle className="text-xl font-semibold text-white">Professional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                <FormField
-                  control={form.control}
-                  name="profilePhoto"
-                  render={({ field }) => (
-                    <div className="flex flex-col items-center mb-8">
-                      <ProfilePhotoUpload
-                        userId={user?.id || ""}
-                        currentPhotoUrl={previewUrl}
-                        onPhotoUpdate={(url) => {
-                          setPreviewUrl(url);
-                          field.onChange(url);
-                        }}
-                        size="lg"
-                      />
-                    </div>
-                  )}
-                />
-
-                <BasicInfoSection form={form} />
-                
-                <SkillsSection 
-                  form={form}
-                  selectedIndustry={selectedIndustry}
-                  availableSkills={availableSkills}
-                  onIndustryChange={handleIndustryChange}
-                />
-
-                <ProjectInfoSection 
-                  form={form}
-                  show={form.watch("stage") === "Founder"}
-                />
-
-                <PreferencesSection form={form} />
-
-                <CardFooter className="flex justify-end px-0 pt-4">
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Complete Profile"
-                    )}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Form>
+          <CardContent className="pt-6 pb-6">
+            <MultiStepForm 
+              initialData={initialFormData} 
+              onSave={handleSave} 
+              onComplete={handleComplete}
+            />
           </CardContent>
         </Card>
       </div>

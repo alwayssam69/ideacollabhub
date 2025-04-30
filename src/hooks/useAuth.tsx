@@ -17,11 +17,11 @@ export const useAuth = () => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // If user just signed up, redirect to onboarding
-        if (event === 'SIGNED_IN' && session) {
+        // If user just signed up or signed in, check their profile status
+        if ((event === 'SIGNED_IN' || event === 'SIGNED_UP') && session) {
           // Using setTimeout to avoid Supabase deadlock
           setTimeout(() => {
-            checkOnboardingStatus(session.user.id);
+            checkProfileStatus(session.user.id);
           }, 0);
         }
       }
@@ -35,7 +35,7 @@ export const useAuth = () => {
       if (session?.user) {
         // Using setTimeout to avoid Supabase deadlock
         setTimeout(() => {
-          checkOnboardingStatus(session.user.id);
+          checkProfileStatus(session.user.id);
         }, 0);
       }
       
@@ -47,15 +47,32 @@ export const useAuth = () => {
     };
   }, [navigate]);
 
-  const checkOnboardingStatus = async (userId: string) => {
+  const checkProfileStatus = async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('onboarding_completed')
+      .select('onboarding_completed, full_name, industry, role, skills, stage, looking_for')
       .eq('id', userId)
       .single();
 
-    if (!error && data && !data.onboarding_completed) {
-      navigate('/onboarding');
+    console.log('Profile check:', data);
+
+    if (!error && data) {
+      // Check if required profile fields are completed
+      const isComplete = data.onboarding_completed || Boolean(
+        data.full_name && 
+        data.industry && 
+        data.role && 
+        data.skills?.length > 0 && 
+        data.stage && 
+        data.looking_for?.length > 0
+      );
+
+      // If profile is not complete, redirect to onboarding
+      if (!isComplete) {
+        navigate('/onboarding');
+      }
+    } else if (error) {
+      console.error('Error checking profile status:', error);
     }
   };
 
@@ -76,11 +93,14 @@ export const useAuth = () => {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { error, data } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: metadata
+        }
       });
       
       if (error) throw error;

@@ -17,19 +17,14 @@ export function OnboardingCheck({ children }: { children: React.ReactNode }) {
     if (!loading && user && profile) {
       console.log("Checking onboarding status:", profile);
       
-      // Check if onboarding is explicitly completed or if all required fields are present
-      const isOnboardingComplete = profile.onboarding_completed || Boolean(
-        profile.industry &&
-        profile.role &&
-        profile.skills?.length > 0 &&
-        profile.stage &&
-        profile.looking_for?.length > 0
-      );
+      // Check if onboarding is explicitly completed
+      const isOnboardingComplete = profile.onboarding_completed;
 
       console.log("Is onboarding complete:", isOnboardingComplete);
 
-      // Don't redirect if we're on the profile or onboarding page
+      // Don't redirect if we're on the profile, onboarding, or auth pages
       if (!isOnboardingComplete && 
+          !location.pathname.startsWith("/auth") &&
           location.pathname !== "/onboarding" && 
           location.pathname !== "/profile") {
         toast.info("Please complete your profile before continuing");

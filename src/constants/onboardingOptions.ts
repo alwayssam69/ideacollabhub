@@ -1,13 +1,18 @@
 
 export const STAGE_OPTIONS = [
   "Founder",
+  "Co-founder",
   "Looking for Co-founder",
   "Startup Team Member",
   "Freelancer",
   "Mentor",
   "Investor",
   "Project Collaborator",
-  "Early Career Professional"
+  "Early Career Professional",
+  "Student",
+  "Corporate Professional",
+  "Entrepreneur",
+  "Advisor"
 ];
 
 export const PROJECT_STAGE_OPTIONS = [
@@ -15,7 +20,11 @@ export const PROJECT_STAGE_OPTIONS = [
   "MVP Development",
   "Beta Testing",
   "Recently Launched",
+  "Product-Market Fit",
   "Scaling",
+  "Revenue Generating",
+  "Fundraising",
+  "Profitable",
   "Not Applicable"
 ];
 
@@ -27,7 +36,17 @@ export const PURPOSE_OPTIONS = [
   "Network",
   "Invest",
   "Share Knowledge",
-  "Learn & Grow"
+  "Learn & Grow",
+  "Hire Talent",
+  "Technical Co-founder",
+  "Business Co-founder",
+  "Designer",
+  "Marketer",
+  "Developer",
+  "Product Manager",
+  "Strategist",
+  "Advisor",
+  "Investor"
 ];
 
 export const INDUSTRY_OPTIONS = [
@@ -41,5 +60,18 @@ export const INDUSTRY_OPTIONS = [
   "Media & Entertainment",
   "Manufacturing",
   "Sustainability",
+  "Artificial Intelligence",
+  "Blockchain",
+  "Fintech",
+  "SaaS",
+  "IoT",
+  "Real Estate",
+  "Food & Beverage",
+  "Transportation",
+  "Travel",
+  "Fashion",
+  "Gaming",
+  "Sports",
+  "Social Impact",
   "Other"
 ];
