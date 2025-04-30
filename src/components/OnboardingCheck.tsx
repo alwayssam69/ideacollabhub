@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,8 +25,10 @@ export function OnboardingCheck({ children }: { children: React.ReactNode }) {
 
       console.log("Is onboarding complete:", isOnboardingComplete);
 
-      // Only redirect if we're not already on the onboarding page
-      if (!isOnboardingComplete && location.pathname !== "/onboarding") {
+      // Don't redirect if we're on the profile or onboarding page
+      if (!isOnboardingComplete && 
+          location.pathname !== "/onboarding" && 
+          location.pathname !== "/profile") {
         toast.info("Please complete your profile before continuing");
         navigate("/onboarding", { replace: true });
       }
