@@ -15,10 +15,11 @@ export const useAuth = () => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
 
-        // If user just signed up or signed in, check their profile status
+        // If user just signed in or was updated, check their profile status
         if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
           // Using setTimeout to avoid Supabase deadlock
           setTimeout(() => {
@@ -30,6 +31,7 @@ export const useAuth = () => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -56,7 +58,7 @@ export const useAuth = () => {
         .eq('id', userId)
         .single();
 
-      console.log('Profile check:', data);
+      console.log('Profile check:', data, error);
 
       if (!error && data) {
         // Check if required profile fields are completed
@@ -83,6 +85,7 @@ export const useAuth = () => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Signing in with:', email);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -91,6 +94,7 @@ export const useAuth = () => {
       if (error) throw error;
       return { success: true };
     } catch (error: any) {
+      console.error('Sign in error:', error);
       return { 
         success: false, 
         error: error.message || 'Failed to sign in'
@@ -100,6 +104,7 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
     try {
+      console.log('Signing up with:', email, metadata);
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
@@ -113,6 +118,7 @@ export const useAuth = () => {
       // Instead of relying on database functions, create profile entry manually after signup
       if (data.user) {
         try {
+          console.log('Creating profile for:', data.user.id);
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -131,6 +137,7 @@ export const useAuth = () => {
 
       return { success: true };
     } catch (error: any) {
+      console.error('Sign up error:', error);
       return { 
         success: false,
         error: error.message || 'Failed to sign up' 
