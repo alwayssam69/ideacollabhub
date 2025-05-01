@@ -54,6 +54,7 @@ export default function UserProfilePage() {
   // Check connection status with this user
   useEffect(() => {
     if (user && id) {
+      refreshConnections();
       const status = checkConnectionStatus(id);
       console.log('Connection status with user:', status);
       setConnectionStatus(status);
@@ -62,7 +63,7 @@ export default function UserProfilePage() {
       console.log('Connection ID:', connId);
       setConnectionId(connId);
     }
-  }, [user, id, checkConnectionStatus, getConnectionId]);
+  }, [user, id, checkConnectionStatus, getConnectionId, refreshConnections]);
 
   const handleConnectRequest = async () => {
     if (!user || !profile) return;
@@ -195,7 +196,7 @@ export default function UserProfilePage() {
             <CardContent className="space-y-4">
               {/* Connection/Messaging Actions */}
               <div className="flex flex-col gap-3">
-                {user && user.id !== profile.id && (
+                {user && user.id !== profile?.id && (
                   <>
                     {connectionStatus === 'none' && (
                       <Button 
@@ -206,9 +207,11 @@ export default function UserProfilePage() {
                         {processingAction ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (
-                          <UserPlus className="h-4 w-4 mr-2" />
+                          <>
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Connect
+                          </>
                         )}
-                        Connect
                       </Button>
                     )}
                     
@@ -224,9 +227,11 @@ export default function UserProfilePage() {
                             {processingAction ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : (
-                              <Check className="h-4 w-4 mr-2" />
+                              <>
+                                <Check className="h-4 w-4 mr-2" />
+                                Accept
+                              </>
                             )}
-                            Accept
                           </Button>
                           <Button 
                             onClick={handleRejectConnection} 

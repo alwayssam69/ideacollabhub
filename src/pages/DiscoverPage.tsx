@@ -43,7 +43,6 @@ const ProfileCard = ({ profile }: { profile: Profile }) => {
   const navigate = useNavigate();
   const { sendConnectionRequest, checkConnectionStatus } = useConnectionRequests();
   const [isLoading, setIsLoading] = useState(false);
-  const [showFullProfile, setShowFullProfile] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
   
   // Check connection status when component mounts

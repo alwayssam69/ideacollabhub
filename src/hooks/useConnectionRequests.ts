@@ -56,6 +56,9 @@ export function useConnectionRequests() {
       // Use type assertion to handle the data
       setRequests(receivedData as unknown as ConnectionRequest[]);
       setSentRequests(sentData as unknown as ConnectionRequest[]);
+      
+      console.log('Received requests:', receivedData);
+      console.log('Sent requests:', sentData);
     } catch (err) {
       console.error('Error fetching connection requests:', err);
       setError(err instanceof Error ? err.message : 'Failed to load connection requests');
@@ -186,13 +189,13 @@ export function useConnectionRequests() {
           event: '*', 
           schema: 'public', 
           table: 'connections',
-          filter: `recipient_id=eq.${user.id}` 
+          filter: `or(recipient_id=eq.${user.id},requester_id=eq.${user.id})` 
         }, 
         (payload) => {
           console.log('Connection change:', payload);
           fetchConnectionRequests();
           
-          if (payload.eventType === 'INSERT') {
+          if (payload.eventType === 'INSERT' && payload.new.recipient_id === user.id) {
             // Show notification for new request
             toast.info('You received a new connection request', {
               action: {
@@ -201,7 +204,11 @@ export function useConnectionRequests() {
               }
             });
           } else if (payload.eventType === 'UPDATE' && payload.new.status === 'accepted') {
-            toast.success('Connection request accepted');
+            if (payload.new.recipient_id === user.id) {
+              toast.success('You accepted a connection request');
+            } else {
+              toast.success('Your connection request was accepted');
+            }
           }
         }
       )

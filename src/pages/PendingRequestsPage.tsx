@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +51,9 @@ export default function PendingRequestsPage() {
           
         if (outgoingError) throw outgoingError;
         
+        console.log("Fetched incoming requests:", incoming);
+        console.log("Fetched outgoing requests:", outgoing);
+        
         setIncomingRequests(incoming as unknown as Connection[]);
         setOutgoingRequests(outgoing as unknown as Connection[]);
       } catch (error) {
@@ -63,6 +65,27 @@ export default function PendingRequestsPage() {
     };
     
     fetchPendingRequests();
+    
+    // Set up a realtime subscription to keep the requests up-to-date
+    const channel = supabase
+      .channel('connections-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'connections',
+          filter: `or(recipient_id=eq.${user?.id},requester_id=eq.${user?.id})` 
+        }, 
+        (payload) => {
+          console.log('Connection change in PendingRequestsPage:', payload);
+          fetchPendingRequests();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
   
   const handleAccept = async (connectionId: string) => {
@@ -71,7 +94,7 @@ export default function PendingRequestsPage() {
       
       const { error } = await supabase
         .from("connections")
-        .update({ status: "accepted" })
+        .update({ status: "accepted", updated_at: new Date().toISOString() })
         .eq("id", connectionId);
       
       if (error) throw error;
@@ -93,7 +116,7 @@ export default function PendingRequestsPage() {
       
       const { error } = await supabase
         .from("connections")
-        .update({ status: "rejected" })
+        .update({ status: "rejected", updated_at: new Date().toISOString() })
         .eq("id", connectionId);
       
       if (error) throw error;
