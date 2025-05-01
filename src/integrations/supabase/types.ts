@@ -68,85 +68,121 @@ export type Database = {
           availability: string | null
           avatar_url: string | null
           bio: string | null
+          core_values: string[] | null
           created_at: string
+          education: string | null
           experience: string | null
           full_name: string | null
+          goals: string[] | null
           id: string
           industry: string | null
           linkedin_url: string | null
           location: string | null
+          location_preference: string | null
+          long_term_goal: string | null
           looking_for: string[] | null
           meeting_preference: string | null
           motivation: string | null
           onboarding_completed: boolean | null
+          past_startup_experience: boolean | null
           portfolio_url: string | null
           preferred_industries: string[] | null
+          preferred_project_stages: string[] | null
           preferred_project_types: string[] | null
           project_description: string | null
           project_stage: string | null
           role: string | null
+          secondary_skills: string[] | null
           skills: string[] | null
           stage: string | null
           status: string | null
           title: string | null
+          tools: string[] | null
           updated_at: string
           username: string | null
+          willing_to_relocate: boolean | null
+          work_history: string | null
+          work_style: string | null
         }
         Insert: {
           availability?: string | null
           avatar_url?: string | null
           bio?: string | null
+          core_values?: string[] | null
           created_at?: string
+          education?: string | null
           experience?: string | null
           full_name?: string | null
+          goals?: string[] | null
           id: string
           industry?: string | null
           linkedin_url?: string | null
           location?: string | null
+          location_preference?: string | null
+          long_term_goal?: string | null
           looking_for?: string[] | null
           meeting_preference?: string | null
           motivation?: string | null
           onboarding_completed?: boolean | null
+          past_startup_experience?: boolean | null
           portfolio_url?: string | null
           preferred_industries?: string[] | null
+          preferred_project_stages?: string[] | null
           preferred_project_types?: string[] | null
           project_description?: string | null
           project_stage?: string | null
           role?: string | null
+          secondary_skills?: string[] | null
           skills?: string[] | null
           stage?: string | null
           status?: string | null
           title?: string | null
+          tools?: string[] | null
           updated_at?: string
           username?: string | null
+          willing_to_relocate?: boolean | null
+          work_history?: string | null
+          work_style?: string | null
         }
         Update: {
           availability?: string | null
           avatar_url?: string | null
           bio?: string | null
+          core_values?: string[] | null
           created_at?: string
+          education?: string | null
           experience?: string | null
           full_name?: string | null
+          goals?: string[] | null
           id?: string
           industry?: string | null
           linkedin_url?: string | null
           location?: string | null
+          location_preference?: string | null
+          long_term_goal?: string | null
           looking_for?: string[] | null
           meeting_preference?: string | null
           motivation?: string | null
           onboarding_completed?: boolean | null
+          past_startup_experience?: boolean | null
           portfolio_url?: string | null
           preferred_industries?: string[] | null
+          preferred_project_stages?: string[] | null
           preferred_project_types?: string[] | null
           project_description?: string | null
           project_stage?: string | null
           role?: string | null
+          secondary_skills?: string[] | null
           skills?: string[] | null
           stage?: string | null
           status?: string | null
           title?: string | null
+          tools?: string[] | null
           updated_at?: string
           username?: string | null
+          willing_to_relocate?: boolean | null
+          work_history?: string | null
+          work_style?: string | null
         }
         Relationships: []
       }
