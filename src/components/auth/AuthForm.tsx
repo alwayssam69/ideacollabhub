@@ -27,7 +27,6 @@ const formSchema = z.object({
   password: z.string().min(8, {
     message: "Password must be at least 8 characters long.",
   }),
-  fullName: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,7 +46,6 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
     defaultValues: {
       email: "",
       password: "",
-      fullName: "",
     },
   });
 
@@ -55,8 +53,6 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
     setIsLoading(true);
     
     try {
-      console.log("Form submitted:", authMode, values);
-      
       if (authMode === "signin") {
         const { success, error } = await signIn(values.email, values.password);
         
@@ -71,16 +67,13 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
           });
         }
       } else {
-        // For signup, pass the full name as metadata
-        const { success, error } = await signUp(values.email, values.password, { 
-          full_name: values.fullName || values.email.split('@')[0] 
-        });
+        const { success, error } = await signUp(values.email, values.password);
         
         if (success) {
           toast.success("Welcome to IdeaCollabHub!", {
             description: "Your account has been created successfully. You'll be redirected to complete your profile.",
           });
-          // Don't navigate yet, wait for auth state to update
+          navigate('/onboarding');
         } else {
           toast.error("Sign up failed", {
             description: error || "Please try a different email or check your connection",
@@ -116,21 +109,6 @@ export default function AuthForm({ mode = "signin" }: { mode?: AuthMode }) {
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          {authMode === "signup" && (
-            <FormField
-              control={form.control}
-              name="fullName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Your name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
           <FormField
             control={form.control}
             name="email"
