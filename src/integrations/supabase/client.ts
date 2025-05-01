@@ -5,18 +5,5 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://bsctzgzvzxrnexzpyhaq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzY3R6Z3p2enhybmV4enB5aGFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3ODYwMjIsImV4cCI6MjA2MDM2MjAyMn0.5qtQ4RkSB-RBltakOZZJ_lwnfA95ekPRQgnoaOh7e0I";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
 // Create and export the Supabase client
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-
-// Add auth state change listener for debugging
-supabase.auth.onAuthStateChange((event, session) => {
-  console.log('Auth state changed:', event, session?.user?.id);
-});
-
-// Add error handling for database operations
-supabase.from('profiles').on('error', (error) => {
-  console.error('Database error:', error);
-});
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY); 
