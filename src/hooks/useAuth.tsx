@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -48,31 +49,35 @@ export const useAuth = () => {
   }, [navigate]);
 
   const checkProfileStatus = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('onboarding_completed, full_name, industry, role, skills, stage, looking_for')
-      .eq('id', userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('onboarding_completed, full_name, industry, role, skills, stage, looking_for')
+        .eq('id', userId)
+        .single();
 
-    console.log('Profile check:', data);
+      console.log('Profile check:', data);
 
-    if (!error && data) {
-      // Check if required profile fields are completed
-      const isComplete = data.onboarding_completed || Boolean(
-        data.full_name && 
-        data.industry && 
-        data.role && 
-        data.skills?.length > 0 && 
-        data.stage && 
-        data.looking_for?.length > 0
-      );
+      if (!error && data) {
+        // Check if required profile fields are completed
+        const isComplete = data.onboarding_completed || Boolean(
+          data.full_name && 
+          data.industry && 
+          data.role && 
+          data.skills?.length > 0 && 
+          data.stage && 
+          data.looking_for?.length > 0
+        );
 
-      // If profile is not complete, redirect to onboarding
-      if (!isComplete) {
-        navigate('/onboarding');
+        // If profile is not complete, redirect to onboarding
+        if (!isComplete) {
+          navigate('/onboarding');
+        }
+      } else if (error) {
+        console.error('Error checking profile status:', error);
       }
-    } else if (error) {
-      console.error('Error checking profile status:', error);
+    } catch (err) {
+      console.error('Error in checkProfileStatus:', err);
     }
   };
 
@@ -104,6 +109,26 @@ export const useAuth = () => {
       });
       
       if (error) throw error;
+
+      // Instead of relying on database functions, create profile entry manually after signup
+      if (data.user) {
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: metadata?.full_name || null,
+              onboarding_completed: false,
+            });
+
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+          }
+        } catch (err) {
+          console.error('Error creating profile:', err);
+        }
+      }
+
       return { success: true };
     } catch (error: any) {
       return { 
