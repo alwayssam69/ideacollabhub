@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -100,19 +99,44 @@ export const useAuth = () => {
 
   const signUp = async (email: string, password: string, metadata?: { full_name?: string }) => {
     try {
+      console.log('Signing up with:', email, metadata);
+      
+      // First, check if the email is already registered
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (existingUser) {
+        return { 
+          success: false, 
+          error: 'Email is already registered' 
+        };
+      }
+
+      // Attempt to sign up the user
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: metadata
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Sign up error:', error);
+        return { 
+          success: false, 
+          error: error.message || 'Failed to sign up' 
+        };
+      }
 
-      // Instead of relying on database functions, create profile entry manually after signup
+      // Create profile entry
       if (data.user) {
         try {
+          console.log('Creating profile for:', data.user.id);
           const { error: profileError } = await supabase
             .from('profiles')
             .insert({
@@ -123,14 +147,19 @@ export const useAuth = () => {
 
           if (profileError) {
             console.error('Error creating profile:', profileError);
+            // Don't return error here as the user is already created
           }
         } catch (err) {
           console.error('Error creating profile:', err);
         }
       }
 
-      return { success: true };
+      return { 
+        success: true,
+        message: 'Please check your email to confirm your account'
+      };
     } catch (error: any) {
+      console.error('Sign up error:', error);
       return { 
         success: false,
         error: error.message || 'Failed to sign up' 
