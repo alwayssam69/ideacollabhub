@@ -19,7 +19,7 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
 
         // If user just signed up or signed in, check their profile status
-        if ((event === 'SIGNED_IN' || event === 'SIGNED_UP') && session) {
+        if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
           // Using setTimeout to avoid Supabase deadlock
           setTimeout(() => {
             checkProfileStatus(session.user.id);
